@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 640" role="img" aria-labelledby="title desc">
+  <title id="title">Candle focus image</title>
+  <desc id="desc">A calm candle flame above a white candle for focus practice.</desc>
+  <rect width="520" height="640" fill="#f8faf8"/>
+  <circle cx="260" cy="224" r="156" fill="#eef6f2"/>
+  <path d="M260 70c54 60 86 110 86 158 0 56-38 98-86 98s-86-42-86-98c0-48 32-98 86-158z" fill="#d8992b"/>
+  <path d="M260 140c32 36 50 66 50 96 0 34-22 60-50 60s-50-26-50-60c0-30 18-60 50-96z" fill="#fff0b7"/>
+  <path d="M248 301h24v55h-24z" fill="#2c3833"/>
+  <path d="M162 342h196v218c0 28-22 50-50 50h-96c-28 0-50-22-50-50V342z" fill="#fff"/>
+  <path d="M162 342h196v42H162z" fill="#e9efe9"/>
+  <path d="M358 386c-16 16-36 22-58 16-32-8-60-4-86 12-18 12-36 12-52 0v-72h196v44z" fill="#f8faf8"/>
+  <path d="M176 610h168" stroke="#cfd9d3" stroke-width="12" stroke-linecap="round"/>
+  <path d="M260 70c54 60 86 110 86 158 0 56-38 98-86 98s-86-42-86-98c0-48 32-98 86-158z" fill="none" stroke="#b36b1c" stroke-width="8"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Candidate profile avatar</title>
+  <desc id="desc">A clean profile avatar for the candidate account button.</desc>
+  <rect width="160" height="160" rx="40" fill="#eef6f2"/>
+  <circle cx="80" cy="62" r="30" fill="#285c8f"/>
+  <path d="M34 139c7-32 24-48 46-48s39 16 46 48" fill="#1f7a58"/>
+  <path d="M58 58c8 8 22 10 44 4" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+</svg>

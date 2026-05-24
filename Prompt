@@ -1,0 +1,15 @@
+I want to build an Ai Agent web page some what similar to chat gpt where you search for anything and it does internet search and after reranking, provides you the most relevant information with the top 3 references. It gives you the option to tag it. 
+
+I will it to have 4 side sections in navigation pane that has - 
+1 - Find Locks - the user will provide the roles he/she is oloking for - use the resume provided by user for missig information and as per that search for jobs in LinkedIn, naukri, foundit, instahyre sites
+2 - resume builder (we will use the resume code we have in github - I will have added the folder - AutoresumeBuilder - can take reference from it (but don't include )- here)
+3 - Create Locks (visible for hirers) - here they will post about jobs
+4 - Tagged Gyaan - The tagged gyaan that user wants to learn would be there from the AI search he did. 
+It will not store any chat until the person wants too. It reamins there until 24 hr. The timer would be shown on the chat which is saved.
+
+we will in future open it for Hirers(Problem Owners)  - Locks and Appliers(Problem Solvers)  - Keys 
+
+If they get selected the key unlock the Locks, until then it shows the matching locks to Appliers and Matching keys to Hirers 
+
+
+
