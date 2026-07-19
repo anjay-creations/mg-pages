@@ -29,7 +29,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -523,7 +524,8 @@ h2 {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -532,6 +534,11 @@ textarea {
 }
 
 input {
+  min-height: 48px;
+  padding: 0 14px;
+}
+
+select {
   min-height: 48px;
   padding: 0 14px;
 }
@@ -939,6 +946,191 @@ label {
   margin-bottom: 10px;
 }
 
+.resume-builder-page {
+  max-width: 1220px;
+}
+
+.resume-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.resume-steps span {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--wash);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.resume-steps span.active {
+  border-color: #8fc9b4;
+  color: var(--green);
+  background: #eaf6f1;
+}
+
+.resume-section {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.resume-section-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.resume-section-head h2,
+.resume-section-head p {
+  margin-bottom: 0;
+}
+
+.resume-section-head p {
+  max-width: 520px;
+  color: var(--muted);
+}
+
+.resume-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-status {
+  justify-self: start;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.field-status.confirmed {
+  color: var(--green);
+  background: #e5f5ee;
+}
+
+.field-status.missing {
+  color: var(--coral);
+  background: #fbece9;
+}
+
+.missing-panel,
+.match-report {
+  padding: 15px;
+  border: 1px solid #efd8a9;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+
+.tailoring-basis {
+  padding: 11px 13px;
+  border-left: 4px solid var(--green);
+  color: var(--muted);
+  background: #edf7f3;
+}
+
+.tailoring-basis strong {
+  color: var(--ink);
+}
+
+.missing-panel h3,
+.missing-panel p,
+.missing-panel ol {
+  margin-bottom: 0;
+}
+
+.missing-panel li {
+  margin-top: 7px;
+}
+
+.confirm-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+}
+
+.confirm-row input {
+  width: auto;
+  min-height: 0;
+}
+
+.match-report {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.match-report h3,
+.match-report p {
+  margin-bottom: 0;
+}
+
+.match-report p {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.resume-preview {
+  max-width: 820px;
+  padding: 38px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 39, 33, 0.08);
+}
+
+.resume-preview header {
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.resume-preview header h2,
+.resume-preview header p {
+  margin-bottom: 6px;
+}
+
+.resume-preview section {
+  margin-top: 18px;
+}
+
+.resume-preview section h3 {
+  margin-bottom: 7px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  text-transform: uppercase;
+}
+
+.resume-preview section p {
+  line-height: 1.55;
+}
+
+.download-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.latex-source pre {
+  max-height: 420px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 8px;
+  color: #e8f0ec;
+  background: #18201d;
+  white-space: pre-wrap;
+}
+
 .tagged-page {
   max-width: 1180px;
 }
@@ -953,7 +1145,9 @@ label {
   }
 
   .suggestion-grid,
-  .mind-backlog {
+  .mind-backlog,
+  .resume-field-grid,
+  .match-report {
     grid-template-columns: 1fr;
   }
 
@@ -968,6 +1162,25 @@ label {
 
   .chat-layout {
     height: auto;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #resumePreview,
+  #resumePreview * {
+    visibility: visible;
+  }
+
+  #resumePreview {
+    position: absolute;
+    inset: 0;
+    max-width: none;
+    border: 0;
+    box-shadow: none;
   }
 }
 

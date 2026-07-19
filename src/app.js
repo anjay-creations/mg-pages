@@ -101,7 +101,8 @@ const state = {
   focusRunning: false,
   focusCompleted: false,
   mindBacklog: loadMindBacklog(),
-  authMessage: ""
+  authMessage: "",
+  resumeBuilder: loadResumeBuilder()
 };
 
 function icon(name) {
@@ -457,28 +458,115 @@ function renderMindBacklog() {
 }
 
 function renderResumeBuilder() {
+  const builder = state.resumeBuilder;
   return `
-    <section class="two-pane">
+    <section class="resume-builder-page">
       <header class="section-head">
-        <p class="eyebrow">Standalone resume workflow</p>
-        <h1>Resume Builder</h1>
-        <p>Create an ATS-ready resume flow directly inside AI Gyaan. Future backend services can parse uploads, detect missing details, and generate tailored drafts.</p>
+        <p class="eyebrow">Guided ATS workflow</p>
+        <h1>AI Resume Builder</h1>
+        <p>First extract, then review, then generate. Nothing is treated as fact until you confirm it, and the builder never invents achievements or metrics.</p>
       </header>
-      <div class="tool-panel">
-        <label>Target job description<textarea placeholder="Paste the lock description to tailor your key."></textarea></label>
-        <label>Existing resume<input type="file" accept=".pdf,.doc,.docx,.txt" /></label>
-        <button class="primary-btn" type="button">${icon("doc")} Generate ATS Draft</button>
+      <div class="resume-steps" aria-label="Resume progress">
+        ${["1. Goal & material", "2. Review extraction", "3. Generate & download"].map((label, index) => `<span class="${builder.step >= index + 1 ? "active" : ""}">${label}</span>`).join("")}
       </div>
-      <div class="preview-panel">
-        <h2>Builder Flow</h2>
-        <ol>
-          <li>Extract job requirements and candidate facts.</li>
-          <li>Ask only for missing information.</li>
-          <li>Generate ATS resume, skill gaps, and recruiter keywords.</li>
-        </ol>
-      </div>
+      ${renderResumeIntake(builder)}
+      ${builder.step >= 2 ? renderResumeReview(builder) : ""}
+      ${builder.step >= 3 ? renderResumeOutput(builder) : ""}
     </section>
   `;
+}
+
+function renderResumeIntake(builder) {
+  return `
+    <form class="resume-section resume-intake" id="resumeIntakeForm">
+      <div class="resume-section-head"><div><span class="source-pill">Step 1</span><h2>Goal and existing information</h2></div><p>Upload or paste what you already have. The next step asks only for important gaps.</p></div>
+      <div class="resume-field-grid">
+        <label>Target role<input id="rbTargetRole" value="${escapeHtml(builder.targetRole)}" placeholder="Enter the role presented by the user" /></label>
+        <label>Profession / field<input id="rbProfession" value="${escapeHtml(builder.profession || "")}" placeholder="Teaching, design, healthcare, finance, trades..." /></label>
+        <label>Industry<input id="rbIndustry" value="${escapeHtml(builder.industry)}" placeholder="Enter only when relevant" /></label>
+        <label>Target company (optional)<input id="rbCompany" value="${escapeHtml(builder.company || "")}" placeholder="Company or organisation" /></label>
+        <label>Target country / market<input id="rbCountry" value="${escapeHtml(builder.country)}" placeholder="India" /></label>
+        <label>Candidate type<select id="rbLevel"><option value="">Select</option>${["Student / fresher", "Experienced professional", "Manager / senior leader", "Career changer", "Returning after a break", "Creative professional", "Research / academic", "Freelancer / consultant", "Entrepreneur", "Skilled trade / vocational"].map(value => `<option ${builder.level === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
+        <label>Resume purpose<select id="rbPurpose">${["General-purpose", "Role-specific", "Company-specific", "Job-description-specific"].map(value => `<option ${builder.purpose === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
+        <label>Resume length<select id="rbLength"><option ${builder.length === "One page" ? "selected" : ""}>One page</option><option ${builder.length === "Two pages" ? "selected" : ""}>Two pages</option></select></label>
+        <label>Language<input id="rbLanguage" value="${escapeHtml(builder.language || "English")}" placeholder="English" /></label>
+        <label>Style<select id="rbStyle">${["Professional and restrained", "Modern", "Academic", "Creative but ATS-readable"].map(value => `<option ${builder.style === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
+        <label>Existing resume or notes<input id="rbFile" type="file" accept=".txt,.pdf,.doc,.docx" /><small>Text files are extracted locally. Paste text for PDF/DOC in this static version.</small></label>
+      </div>
+      <label>Resume, LinkedIn text, biography, experience, projects, or rough notes<textarea id="rbSource" placeholder="Paste all available professional information here...">${escapeHtml(builder.sourceText)}</textarea></label>
+      <label>Target job description (optional)<textarea id="rbJobDescription" placeholder="Paste a job description for honest keyword matching...">${escapeHtml(builder.jobDescription)}</textarea></label>
+      <p class="form-status" id="rbFileStatus" role="status"></p>
+      <button class="primary-btn" type="submit">${icon("spark")} Extract information</button>
+    </form>
+  `;
+}
+
+function renderResumeReview(builder) {
+  const data = builder.data;
+  const labels = getResumeLabels(builder);
+  const field = (label, key, type = "text") => `
+    <label>${label} ${resumeStatusPill(data[key])}<input type="${type}" data-resume-field="${key}" value="${escapeHtml(data[key] || "")}" /></label>`;
+  return `
+    <section class="resume-section" id="resumeReview">
+      <div class="resume-section-head"><div><span class="source-pill">Step 2</span><h2>Review extracted information</h2></div><p>Correct, replace, or delete anything inaccurate. Your edits become the source of truth.</p></div>
+      <div class="resume-field-grid">
+        ${field("Full name", "fullName")}${field("Professional title", "professionalTitle")}
+        ${field("Email", "email", "email")}${field("Phone with country code", "phone", "tel")}
+        ${field("Location", "location")}${field("LinkedIn URL", "linkedin", "url")}
+        ${field("Relevant professional / portfolio link", "portfolio", "url")}${field("Years of experience", "years")}
+      </div>
+      <label>Skills supported by the user's evidence ${resumeStatusPill(data.skills)}<textarea data-resume-field="skills" placeholder="Skills evidenced in experience, projects, education, or certifications">${escapeHtml(data.skills || "")}</textarea></label>
+      <label>${labels.experience} ${resumeStatusPill(data.experience)}<textarea data-resume-field="experience" placeholder="Include role, organisation, dates, contributions, methods, stakeholders, and factual impact">${escapeHtml(data.experience || "")}</textarea></label>
+      <label>${labels.projects} ${resumeStatusPill(data.projects)}<textarea data-resume-field="projects" placeholder="Selected work, objective, personal contribution, approach, outcome, and relevant link">${escapeHtml(data.projects || "")}</textarea></label>
+      <label>Education ${resumeStatusPill(data.education)}<textarea data-resume-field="education" placeholder="Degree, institution, location, dates, grade if useful">${escapeHtml(data.education || "")}</textarea></label>
+      <label>Certifications and achievements ${resumeStatusPill(data.certifications)}<textarea data-resume-field="certifications" placeholder="Name, issuer, date, credential link, awards">${escapeHtml(data.certifications || "")}</textarea></label>
+      <label>${labels.additional} ${resumeStatusPill(data.additional)}<textarea data-resume-field="additional" placeholder="Only applicable publications, licences, languages, volunteering, memberships, awards, or leadership">${escapeHtml(data.additional || "")}</textarea></label>
+      <div class="missing-panel">
+        <h3>Highest-impact information to complete</h3>
+        ${builder.missing.length ? `<ol>${builder.missing.slice(0, 6).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : "<p>Core information is present. Verify dates, claims, links, and confidential details before generating.</p>"}
+      </div>
+      <label class="confirm-row"><input id="rbConfirm" type="checkbox" ${builder.confirmed ? "checked" : ""} /> I reviewed the extracted facts and removed unsupported or confidential claims.</label>
+      <button class="primary-btn" id="generateResume" type="button">${icon("doc")} Generate ATS resume</button>
+    </section>
+  `;
+}
+
+function renderResumeOutput(builder) {
+  const report = buildResumeMatchReport(builder);
+  return `
+    <section class="resume-section resume-output" id="resumeOutput">
+      <div class="resume-section-head"><div><span class="source-pill">Step 3</span><h2>Resume preview and files</h2></div><p>Directional compatibility only—this is not a guaranteed ATS score.</p></div>
+      <div class="tailoring-basis"><strong>Tailored for:</strong> ${escapeHtml(builder.targetRole)}${builder.profession ? ` · ${escapeHtml(builder.profession)}` : ""}${builder.industry ? ` · ${escapeHtml(builder.industry)}` : ""}${builder.company ? ` · ${escapeHtml(builder.company)}` : ""}</div>
+      <div class="match-report">
+        <div><h3>Strong matches</h3><p>${builder.jobDescription ? report.strong.join(", ") || "No supported keyword matches identified yet." : "Add a job description for role-specific matching."}</p></div>
+        <div><h3>Missing or unsupported</h3><p>${builder.jobDescription ? report.missing.join(", ") || "No obvious keyword gaps found." : "No job description was supplied; no requirements were assumed."}</p></div>
+        <div><h3>Validation notes</h3><p>${builder.missing.slice(0, 3).join(" ") || "Core sections are present; perform a final date and claim check."}</p></div>
+      </div>
+      <article class="resume-preview" id="resumePreview">${buildResumePreview(builder)}</article>
+      <div class="download-row">
+        <button class="primary-btn" id="downloadTex" type="button">Download LaTeX Resume</button>
+        <button class="ghost-btn" id="downloadText" type="button">Download Plain Text</button>
+        <button class="ghost-btn" id="printResume" type="button">Print / Save PDF</button>
+      </div>
+      <details class="latex-source"><summary>View complete LaTeX source</summary><pre>${escapeHtml(buildLatexResume(builder))}</pre></details>
+    </section>
+  `;
+}
+
+function resumeStatusPill(value) {
+  const status = value?.trim() ? "Confirmed from source—verify" : "Missing";
+  return `<span class="field-status ${value?.trim() ? "confirmed" : "missing"}">${status}</span>`;
+}
+
+function getResumeLabels(builder) {
+  const type = builder.level;
+  if (type === "Creative professional") return { experience: "Professional experience", projects: "Selected work / portfolio", additional: "Awards, exhibitions, publications, or other relevant sections" };
+  if (type === "Research / academic") return { experience: "Research and teaching experience", projects: "Research, publications, presentations, or major assignments", additional: "Grants, memberships, awards, or other relevant sections" };
+  if (type === "Freelancer / consultant") return { experience: "Consulting / freelance experience", projects: "Selected client work and outcomes", additional: "Services, memberships, publications, or other relevant sections" };
+  if (type === "Student / fresher") return { experience: "Internships, apprenticeships, volunteering, or experience", projects: "Projects, coursework, or selected work", additional: "Activities, awards, languages, or other relevant sections" };
+  if (type === "Manager / senior leader") return { experience: "Leadership and professional experience", projects: "Career achievements and major initiatives", additional: "Board, advisory, speaking, awards, or other relevant sections" };
+  if (type === "Skilled trade / vocational") return { experience: "Employment and apprenticeship history", projects: "Selected assignments or completed work", additional: "Licences, safety training, equipment, or other relevant sections" };
+  return { experience: "Professional experience and achievements", projects: "Projects, selected work, or major assignments", additional: "Additional relevant information" };
 }
 
 function renderCreateLocks() {
@@ -602,6 +690,20 @@ function bindViewEvents() {
   document.querySelectorAll(".delete-thought").forEach(button => {
     button.addEventListener("click", () => deleteThought(button.dataset.id));
   });
+
+  document.querySelector("#rbFile")?.addEventListener("change", handleBuilderFile);
+  document.querySelector("#resumeIntakeForm")?.addEventListener("submit", extractResumeInformation);
+  document.querySelectorAll("[data-resume-field]").forEach(input => {
+    input.addEventListener("input", updateResumeField);
+  });
+  document.querySelector("#rbConfirm")?.addEventListener("change", event => {
+    state.resumeBuilder.confirmed = event.target.checked;
+    persistResumeBuilder();
+  });
+  document.querySelector("#generateResume")?.addEventListener("click", generateResumeOutput);
+  document.querySelector("#downloadTex")?.addEventListener("click", () => downloadResumeFile("resume.tex", buildLatexResume(state.resumeBuilder), "application/x-tex"));
+  document.querySelector("#downloadText")?.addEventListener("click", () => downloadResumeFile("resume.txt", buildPlainResume(state.resumeBuilder), "text/plain"));
+  document.querySelector("#printResume")?.addEventListener("click", () => window.print());
 
   document.querySelector("#createLockForm")?.addEventListener("submit", event => {
     event.preventDefault();
@@ -808,6 +910,164 @@ function loadMindBacklog() {
   return JSON.parse(localStorage.getItem("aigyaan-mind-backlog") || "[]");
 }
 
+function loadResumeBuilder() {
+  const defaults = {
+    step: 1, targetRole: "", profession: "", industry: "", company: "", country: "", level: "",
+    purpose: "Role-specific", length: "One page", language: "English", style: "Professional and restrained",
+    sourceText: "", jobDescription: "", confirmed: false, missing: [], data: {}
+  };
+  try {
+    return { ...defaults, ...JSON.parse(localStorage.getItem("aigyaan-resume-builder") || "{}") };
+  } catch {
+    return defaults;
+  }
+}
+
+function persistResumeBuilder() {
+  localStorage.setItem("aigyaan-resume-builder", JSON.stringify(state.resumeBuilder));
+}
+
+async function handleBuilderFile(event) {
+  const file = event.target.files[0];
+  const status = document.querySelector("#rbFileStatus");
+  if (!file) return;
+  if (file.name.toLowerCase().endsWith(".txt")) {
+    const text = await file.text();
+    document.querySelector("#rbSource").value = text;
+    status.textContent = `${file.name} extracted locally. Review the text before continuing.`;
+  } else {
+    status.textContent = `${file.name} selected. PDF/DOC extraction requires a document backend; paste its text above to continue accurately.`;
+  }
+}
+
+function extractResumeInformation(event) {
+  event.preventDefault();
+  const builder = state.resumeBuilder;
+  builder.targetRole = document.querySelector("#rbTargetRole").value.trim();
+  builder.profession = document.querySelector("#rbProfession").value.trim();
+  builder.industry = document.querySelector("#rbIndustry").value.trim();
+  builder.company = document.querySelector("#rbCompany").value.trim();
+  builder.country = document.querySelector("#rbCountry").value.trim();
+  builder.level = document.querySelector("#rbLevel").value;
+  builder.purpose = document.querySelector("#rbPurpose").value;
+  builder.length = document.querySelector("#rbLength").value;
+  builder.language = document.querySelector("#rbLanguage").value.trim();
+  builder.style = document.querySelector("#rbStyle").value;
+  builder.sourceText = document.querySelector("#rbSource").value.trim();
+  builder.jobDescription = document.querySelector("#rbJobDescription").value.trim();
+  builder.data = extractResumeData(builder.sourceText, builder.targetRole, builder.jobDescription);
+  builder.missing = findMissingResumeInformation(builder);
+  builder.confirmed = false;
+  builder.step = 2;
+  persistResumeBuilder();
+  render();
+  document.querySelector("#resumeReview")?.scrollIntoView({ behavior: "smooth" });
+}
+
+function extractResumeData(text, targetRole, jobDescription = "") {
+  const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+  const phone = (text.match(/(?:\+?\d[\d\s().-]{7,}\d)/g) || []).find(value => value.replace(/\D/g, "").length >= 10) || "";
+  const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s]+/i)?.[0] || "";
+  const portfolio = text.match(/https?:\/\/(?!.*linkedin\.com)[^\s]+/i)?.[0] || "";
+  const years = text.match(/(\d+(?:\.\d+)?)\+?\s+years?/i)?.[1] || "";
+  const section = heading => extractTextSection(lines, heading);
+  const explicitSkills = section(/^(key |core |professional |technical )?skills|capabilities|competencies|expertise/i);
+  const skills = extractRoleRelevantSkills(text, jobDescription, explicitSkills);
+  return {
+    fullName: lines.find(line => !line.includes("@") && line.length < 60 && /^[A-Za-z][A-Za-z .'-]+$/.test(line) && !/^(resume|summary|profile|skills?|education|experience|projects?|certifications?|achievements?)$/i.test(line)) || "",
+    professionalTitle: "",
+    email, phone, location: "", linkedin, portfolio, years, skills,
+    experience: section(/^(work |professional )?experience/i),
+    projects: section(/^projects?/i),
+    education: section(/^education|academic/i),
+    certifications: section(/^certifications?|licen[cs]es?|training|courses?|achievements?|awards?/i),
+    additional: section(/^publications?|research|presentations?|volunteering|leadership|memberships?|languages?|additional information/i)
+  };
+}
+
+function extractRoleRelevantSkills(sourceText, jobDescription, explicitSkills) {
+  if (explicitSkills) return explicitSkills.replaceAll("\n", ", ");
+  const source = sourceText.toLowerCase();
+  if (!jobDescription) return "";
+  const roleTerms = extractMeaningfulPhrases(jobDescription).filter(term => source.includes(term.toLowerCase()));
+  return [...new Set(roleTerms)].slice(0, 20).map(toTitleCase).join(", ");
+}
+
+function extractMeaningfulPhrases(value) {
+  const words = value.toLowerCase().match(/[a-z][a-z+#.'-]{2,}/g) || [];
+  const singleTerms = words.filter(word => !resumeStopWords().has(word));
+  const phrases = [];
+  for (let index = 0; index < words.length - 1; index += 1) {
+    if (!resumeStopWords().has(words[index]) && !resumeStopWords().has(words[index + 1])) phrases.push(`${words[index]} ${words[index + 1]}`);
+  }
+  return [...phrases, ...singleTerms];
+}
+
+function resumeStopWords() {
+  return new Set(["and", "the", "with", "for", "that", "from", "this", "will", "your", "have", "years", "experience", "skills", "role", "work", "job", "team", "using", "required", "preferred"]);
+}
+
+function toTitleCase(value) {
+  return value.replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function extractTextSection(lines, headingPattern) {
+  const start = lines.findIndex(line => headingPattern.test(line));
+  if (start < 0) return "";
+  const collected = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^(skills?|capabilities|competencies|expertise|education|experience|employment|projects?|selected work|portfolio|certifications?|licen[cs]es?|training|achievements?|awards?|publications?|research|presentations?|volunteering|leadership|memberships?|languages?|summary|profile|additional information)$/i.test(lines[index])) break;
+    collected.push(lines[index]);
+  }
+  return collected.join("\n");
+}
+
+function updateResumeField(event) {
+  state.resumeBuilder.data[event.target.dataset.resumeField] = event.target.value;
+  state.resumeBuilder.missing = findMissingResumeInformation(state.resumeBuilder);
+  state.resumeBuilder.step = 2;
+  persistResumeBuilder();
+}
+
+function findMissingResumeInformation(builder) {
+  const data = builder.data || {};
+  const missing = [];
+  if (!builder.targetRole) missing.push("Add the target role before tailoring the resume.");
+  if (!data.fullName) missing.push("Provide and verify your full name.");
+  if (!data.email || !data.phone) missing.push("Complete professional email and phone number with country code.");
+  if (!data.location) missing.push("Add city and country; a full residential address is unnecessary.");
+  if (!data.experience && builder.level !== "Student / fresher") missing.push("Add professional history with role, organisation, dates, personal contribution, approach, and factual impact.");
+  if (!data.education) missing.push("Add degree, institution, location, and complete dates.");
+  if (!data.skills) missing.push("Add only skills supported by experience, projects, education, or certifications.");
+  if (["Student / fresher", "Creative professional", "Research / academic", "Freelancer / consultant"].includes(builder.level) && !data.projects) missing.push(`Add ${getResumeLabels(builder).projects.toLowerCase()} relevant to ${builder.targetRole || "the intended role"}.`);
+  if (builder.level === "Creative professional" && !data.portfolio) missing.push("Add the profession-relevant portfolio or published-work link, if available.");
+  if (builder.level === "Skilled trade / vocational" && !data.certifications) missing.push("Add applicable licences, safety credentials, apprenticeships, or vocational training and verify their status.");
+  if (data.experience && !/\b(achieved|advised|analysed|built|coordinated|created|delivered|designed|developed|directed|educated|facilitated|improved|implemented|led|managed|mentored|negotiated|organised|planned|prepared|presented|produced|reduced|researched|resolved|reviewed|sold|streamlined|supported|trained|transformed)\b/i.test(data.experience)) missing.push("Strengthen professional history with role-appropriate action, context, and factual impact; do not invent metrics.");
+  return missing;
+}
+
+function generateResumeOutput() {
+  const builder = state.resumeBuilder;
+  document.querySelectorAll("[data-resume-field]").forEach(input => {
+    builder.data[input.dataset.resumeField] = input.value.trim();
+  });
+  builder.confirmed = document.querySelector("#rbConfirm")?.checked || false;
+  builder.missing = findMissingResumeInformation(builder);
+  if (!builder.targetRole) {
+    window.alert("Add the role presented by the user before tailoring and generating the final resume.");
+    return;
+  }
+  if (!builder.confirmed) {
+    window.alert("Please review the extracted facts and confirm them before generating the resume.");
+    return;
+  }
+  builder.step = 3;
+  persistResumeBuilder();
+  render();
+  document.querySelector("#resumeOutput")?.scrollIntoView({ behavior: "smooth" });
+}
+
 function addThought(event) {
   event.preventDefault();
   const input = document.querySelector("#mindThought");
@@ -844,6 +1104,103 @@ function beginLogin(provider) {
   const target = new URL(authUrl, window.location.href);
   target.searchParams.set("returnTo", window.location.href);
   window.location.assign(target.toString());
+}
+
+function buildResumeMatchReport(builder) {
+  if (!builder.jobDescription) return { strong: [], missing: [] };
+  const candidate = `${builder.sourceText} ${Object.values(builder.data || {}).join(" ")}`.toLowerCase();
+  const keywords = [...new Set(extractMeaningfulPhrases(builder.jobDescription))];
+  return {
+    strong: keywords.filter(word => candidate.includes(word)).slice(0, 12),
+    missing: keywords.filter(word => !candidate.includes(word)).slice(0, 12)
+  };
+}
+
+function buildProfessionalSummary(builder) {
+  const data = builder.data;
+  const parts = [];
+  if (data.professionalTitle || builder.targetRole) parts.push(`${data.professionalTitle || builder.targetRole}${data.years ? ` with ${data.years} years of experience` : ""}`);
+  if (data.skills) parts.push(`Experience supported by ${data.skills.split(",").slice(0, 6).join(", ")}`);
+  if (builder.profession) parts.push(`Background relevant to ${builder.profession}`);
+  if (builder.industry) parts.push(`Targeting opportunities in ${builder.industry}`);
+  if (builder.company) parts.push(`Tailored for ${builder.company}`);
+  return parts.length ? `${parts.join(". ")}.` : "Professional summary requires confirmed role, experience, and supported skills.";
+}
+
+function getOrderedResumeSections(builder) {
+  const data = builder.data;
+  const labels = getResumeLabels(builder);
+  const all = {
+    summary: { title: builder.level === "Manager / senior leader" ? "Executive Profile" : builder.level === "Research / academic" ? "Research Profile" : "Professional Summary", value: buildProfessionalSummary(builder) },
+    skills: { title: builder.level === "Career changer" ? "Transferable Skills" : builder.level === "Creative professional" ? "Core Capabilities" : builder.level === "Manager / senior leader" ? "Leadership Capabilities" : "Key Skills", value: data.skills },
+    experience: { title: labels.experience, value: data.experience },
+    projects: { title: labels.projects, value: data.projects },
+    education: { title: "Education", value: data.education },
+    certifications: { title: builder.level === "Skilled trade / vocational" ? "Licences, Certifications & Training" : "Certifications, Licences & Training", value: data.certifications },
+    additional: { title: labels.additional, value: data.additional }
+  };
+  const orders = {
+    "Student / fresher": ["summary", "education", "skills", "projects", "experience", "certifications", "additional"],
+    "Manager / senior leader": ["summary", "skills", "projects", "experience", "education", "certifications", "additional"],
+    "Career changer": ["summary", "skills", "projects", "experience", "education", "certifications", "additional"],
+    "Creative professional": ["summary", "skills", "projects", "experience", "education", "additional", "certifications"],
+    "Research / academic": ["summary", "education", "experience", "projects", "additional", "certifications", "skills"],
+    "Freelancer / consultant": ["summary", "skills", "projects", "experience", "education", "certifications", "additional"]
+  };
+  return (orders[builder.level] || ["summary", "skills", "experience", "projects", "education", "certifications", "additional"])
+    .map(key => all[key]).filter(section => section.value?.trim());
+}
+
+function buildResumePreview(builder) {
+  const data = builder.data;
+  const section = (title, value) => value?.trim() ? `<section><h3>${title}</h3><p>${escapeHtml(value).replaceAll("\n", "<br>")}</p></section>` : "";
+  return `<header><h2>${escapeHtml(data.fullName || "Name required")}</h2><strong>${escapeHtml(data.professionalTitle || builder.targetRole)}</strong><p>${[data.email, data.phone, data.location, data.linkedin, data.portfolio].filter(Boolean).map(escapeHtml).join(" · ")}</p></header>
+    ${getOrderedResumeSections(builder).map(item => section(item.title, item.value)).join("")}`;
+}
+
+function buildPlainResume(builder) {
+  const data = builder.data;
+  return [data.fullName || "NAME REQUIRED", data.professionalTitle || builder.targetRole,
+    [data.email, data.phone, data.location, data.linkedin, data.portfolio].filter(Boolean).join(" | "),
+    ...getOrderedResumeSections(builder).map(item => `\n${item.title.toUpperCase()}\n${item.value}`)].filter(Boolean).join("\n");
+}
+
+function escapeLatex(value) {
+  const replacements = { "\\": "\\textbackslash{}", "&": "\\&", "%": "\\%", "$": "\\$", "#": "\\#", "_": "\\_", "{": "\\{", "}": "\\}", "~": "\\textasciitilde{}", "^": "\\textasciicircum{}" };
+  return String(value || "").replace(/[\\&%$#_{}~^]/g, character => replacements[character]);
+}
+
+function buildLatexResume(builder) {
+  const data = builder.data;
+  const section = (title, value) => value?.trim() ? `\\section*{${title}}\n${escapeLatex(value).replaceAll("\n", "\\\\\n")}\n` : "";
+  return `\\documentclass[10pt,a4paper]{article}
+\\usepackage[margin=0.7in]{geometry}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage{lmodern}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{titlesec}
+\\setlength{\\parindent}{0pt}
+\\pagenumbering{gobble}
+\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]
+\\begin{document}
+% Header
+{\\LARGE\\textbf{${escapeLatex(data.fullName || "Name required")}}}\\\\
+${escapeLatex(data.professionalTitle || builder.targetRole)}\\\\
+${escapeLatex([data.email, data.phone, data.location, data.linkedin, data.portfolio].filter(Boolean).join(" | "))}
+
+% Sections are ordered for the candidate type selected by the user.
+${getOrderedResumeSections(builder).map(item => section(escapeLatex(item.title), item.value)).join("")}\\end{document}
+`;
+}
+
+function downloadResumeFile(filename, content, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function loadDailyKeys() {
