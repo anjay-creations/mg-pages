@@ -78,6 +78,15 @@ const brandCareerPages = [
   { name: "Flipkart", url: "https://www.flipkartcareers.com/#!/joblist" }
 ];
 
+const roleProfiles = [
+  { title: "AI Product Manager", terms: ["product", "roadmap", "stakeholder", "analytics", "llm", "ai"] },
+  { title: "Generative AI Engineer", terms: ["python", "llm", "nlp", "fastapi", "rag", "langchain", "openai"] },
+  { title: "Frontend Engineer", terms: ["react", "javascript", "typescript", "css", "frontend", "ui"] },
+  { title: "Data Analyst", terms: ["sql", "analytics", "excel", "tableau", "power bi", "data"] },
+  { title: "Cloud Engineer", terms: ["aws", "azure", "gcp", "docker", "kubernetes", "cloud"] },
+  { title: "Business Analyst", terms: ["requirements", "stakeholder", "process", "business", "communication", "analysis"] }
+];
+
 const state = {
   activeView: "search",
   roleMode: "applier",
@@ -90,7 +99,9 @@ const state = {
   focusDuration: Number(localStorage.getItem("aigyaan-focus-duration") || 60),
   focusRemaining: Number(localStorage.getItem("aigyaan-focus-duration") || 60),
   focusRunning: false,
-  focusCompleted: false
+  focusCompleted: false,
+  mindBacklog: loadMindBacklog(),
+  authMessage: ""
 };
 
 function icon(name) {
@@ -174,8 +185,9 @@ function renderProfileDrawer() {
       <div class="profile-detail"><span>Workspace mode</span><strong>${state.roleMode === "applier" ? "Key / Applier" : "Hirer"}</strong></div>
       <div class="drawer-section">
         <h3>Login</h3>
-        <button class="login-btn" type="button">Continue with Google</button>
-        <button class="login-btn" type="button">Continue with LinkedIn</button>
+        <button class="login-btn auth-login" data-provider="google" type="button">Continue with Google</button>
+        <button class="login-btn auth-login" data-provider="linkedin" type="button">Continue with LinkedIn</button>
+        <p class="auth-status" id="authStatus" role="status">${escapeHtml(state.authMessage)}</p>
       </div>
       <div class="drawer-section">
         <h3>Settings</h3>
@@ -289,7 +301,7 @@ function renderSavedChat(chat) {
 }
 
 function renderFindLocks() {
-  const initialResults = buildJobSearchLinks("AI Product Manager", "India", "LLM apps, analytics, stakeholder communication");
+  const initialResults = buildJobSearchLinks("", "India", "LLM apps, analytics, stakeholder communication");
   return `
     <section class="workspace-grid">
       <header class="section-head">
@@ -298,10 +310,12 @@ function renderFindLocks() {
         <p>Search live job boards for roles posted within the last 7 days. Hirer-created locks appear first when available.</p>
       </header>
       <form class="tool-panel" id="findLocksForm">
-        <label>Roles you are looking for<input id="roleInput" placeholder="AI Engineer, Data Analyst, Product Manager" /></label>
+        <label>Roles you are looking for (optional)<input id="roleInput" placeholder="Leave blank to get resume-based suggestions" /></label>
         <label>Preferred location<input id="locationInput" placeholder="India, Bengaluru, Remote, Mumbai" /></label>
-        <label>Resume or profile notes<textarea id="resumeInput" placeholder="Paste resume text. Missing skills, locations, experience, and tools will be inferred from this."></textarea></label>
-        <button class="primary-btn" type="submit">${icon("search")} Search Recent Jobs</button>
+        <label>Upload resume<input id="resumeFile" type="file" accept=".txt,.pdf,.doc,.docx" /><small>Text files are read automatically. For PDF/DOC, add profile notes below in this static version.</small></label>
+        <label>Resume or profile notes<textarea id="resumeInput" placeholder="Paste resume text, skills, achievements, and experience."></textarea></label>
+        <p class="form-status" id="resumeStatus" role="status"></p>
+        <button class="primary-btn" type="submit">${icon("search")} Suggest Roles &amp; Find Jobs</button>
       </form>
       <div class="results-column" id="jobResults">${renderJobResults(initialResults)}</div>
     </section>
@@ -326,6 +340,11 @@ function renderJobResults(results) {
   return `
     ${hirerLocks}
     <div class="result-group">
+      <h2>Suggested roles from your resume</h2>
+      <p class="result-note">${escapeHtml(results.explanation)}</p>
+      <div class="suggestion-grid">${results.suggestedRoles.map(renderSuggestedRole).join("")}</div>
+    </div>
+    <div class="result-group">
       <h2>Recent Board Searches</h2>
       ${results.boardLinks.map(renderJobCard).join("")}
     </div>
@@ -333,6 +352,19 @@ function renderJobResults(results) {
       <h2>Top Brand Career Pages</h2>
       <div class="brand-grid">${results.brandLinks.map(renderBrandLink).join("")}</div>
     </div>
+  `;
+}
+
+function renderSuggestedRole(role) {
+  return `
+    <article class="role-suggestion">
+      <span class="match-badge">${role.score}% match</span>
+      <h3>${escapeHtml(role.title)}</h3>
+      <p>Matched: ${role.matches.map(escapeHtml).join(", ") || "transferable experience"}</p>
+      <div class="role-actions">
+        ${role.links.map(link => `<a href="${link.url}" target="_blank" rel="noreferrer">View ${link.board} roles</a>`).join("")}
+      </div>
+    </article>
   `;
 }
 
@@ -375,7 +407,7 @@ function renderFocus() {
         <p>This page is only for self improvement and not to showcase. Be true to yourself before you mark a session successful.</p>
       </header>
       <div class="focus-stage">
-        <div class="candle-frame">
+        <div class="candle-frame ${state.focusRunning ? "is-burning" : ""}">
           <img src="./src/assets/candle.svg" alt="A candle flame for focus practice" />
         </div>
         <div class="focus-panel">
@@ -390,7 +422,37 @@ function renderFocus() {
           ${state.focusCompleted ? `<button class="primary-btn complete-focus" id="completeFocus" type="button">I completed it truthfully</button>` : ""}
         </div>
       </div>
+      <section class="mind-backlog">
+        <div>
+          <p class="eyebrow">Clear your mind</p>
+          <h2>Let it go for now</h2>
+          <p>Capture a thought without following it. Your latest 10 stay here; older thoughts move into the archive automatically.</p>
+        </div>
+        <form id="mindBacklogForm" class="mind-form">
+          <textarea id="mindThought" maxlength="500" placeholder="What is coming to mind?"></textarea>
+          <button class="primary-btn" type="submit">Let it go</button>
+        </form>
+        ${renderMindBacklog()}
+      </section>
     </section>
+  `;
+}
+
+function renderMindBacklog() {
+  const current = state.mindBacklog.slice(0, 10);
+  const archived = state.mindBacklog.slice(10);
+  const cards = items => items.map(item => `
+    <article class="thought-card">
+      <div><p>${escapeHtml(item.text)}</p><small>${formatThoughtDate(item.createdAt)}</small></div>
+      <button class="text-btn delete-thought" data-id="${item.id}" type="button" aria-label="Delete thought">Delete</button>
+    </article>
+  `).join("");
+  return `
+    <div class="thought-list">
+      <h3>Mind backlog <span>${current.length}/10</span></h3>
+      ${current.length ? cards(current) : "<p class=\"empty-note\">Your mind backlog is clear.</p>"}
+    </div>
+    ${archived.length ? `<details class="thought-archive"><summary>Archive (${archived.length})</summary><div class="thought-list">${cards(archived)}</div></details>` : ""}
   `;
 }
 
@@ -490,6 +552,9 @@ function bindGlobalEvents() {
 
   document.querySelector("#closeProfile")?.addEventListener("click", closeProfile);
   document.querySelector("#drawerBackdrop")?.addEventListener("click", closeProfile);
+  document.querySelectorAll(".auth-login").forEach(button => {
+    button.addEventListener("click", () => beginLogin(button.dataset.provider));
+  });
 }
 
 function bindViewEvents() {
@@ -518,11 +583,13 @@ function bindViewEvents() {
 
   bindApplyButtons();
 
+  document.querySelector("#resumeFile")?.addEventListener("change", handleResumeFile);
+
   document.querySelector("#findLocksForm")?.addEventListener("submit", event => {
     event.preventDefault();
-    const role = document.querySelector("#roleInput").value || "AI Engineer";
+    const role = document.querySelector("#roleInput").value.trim();
     const location = document.querySelector("#locationInput").value || "India";
-    const resume = document.querySelector("#resumeInput").value || "Python, LLMs, React, product analytics";
+    const resume = document.querySelector("#resumeInput").value.trim();
     document.querySelector("#jobResults").innerHTML = renderJobResults(buildJobSearchLinks(role, location, resume));
     bindApplyButtons();
   });
@@ -531,6 +598,10 @@ function bindViewEvents() {
   document.querySelector("#resetFocus")?.addEventListener("click", resetFocus);
   document.querySelector("#failFocus")?.addEventListener("click", failFocus);
   document.querySelector("#completeFocus")?.addEventListener("click", completeFocus);
+  document.querySelector("#mindBacklogForm")?.addEventListener("submit", addThought);
+  document.querySelectorAll(".delete-thought").forEach(button => {
+    button.addEventListener("click", () => deleteThought(button.dataset.id));
+  });
 
   document.querySelector("#createLockForm")?.addEventListener("submit", event => {
     event.preventDefault();
@@ -610,9 +681,14 @@ function isRecruitmentQuery(query) {
 }
 
 function buildJobSearchLinks(role, location, resume) {
-  const roleText = role.split(",")[0].trim() || "AI Engineer";
+  const suggestions = suggestRoles(role, resume, location);
+  const roleText = role.split(",")[0].trim() || suggestions[0].title;
   const skills = extractSkills(resume);
   return {
+    suggestedRoles: suggestions,
+    explanation: role.trim()
+      ? "Your requested role is prioritised, followed by adjacent roles supported by your resume keywords."
+      : "These roles are ranked from the skills and experience signals found in your resume notes.",
     boardLinks: jobBoards.map(board => ({
       board: board.name,
       domain: board.domain,
@@ -626,6 +702,39 @@ function buildJobSearchLinks(role, location, resume) {
       url: addBrandQuery(brand, roleText, location)
     }))
   };
+}
+
+function suggestRoles(requestedRole, resume, location) {
+  const text = `${requestedRole} ${resume}`.toLowerCase();
+  const requested = requestedRole.split(",").map(value => value.trim()).filter(Boolean);
+  const ranked = roleProfiles.map(profile => {
+    const matches = profile.terms.filter(term => text.includes(term));
+    const explicitlyRequested = requested.some(role => profile.title.toLowerCase().includes(role.toLowerCase()) || role.toLowerCase().includes(profile.title.toLowerCase()));
+    return { ...profile, matches, points: matches.length + (explicitlyRequested ? 8 : 0) };
+  }).sort((a, b) => b.points - a.points || a.title.localeCompare(b.title));
+
+  const custom = requested
+    .filter(title => !ranked.some(profile => profile.title.toLowerCase() === title.toLowerCase()))
+    .map(title => ({ title, matches: ["your selected target"], points: 8 }));
+
+  return [...custom, ...ranked].slice(0, 3).map((profile, index) => ({
+    title: profile.title,
+    matches: profile.matches.slice(0, 4),
+    score: Math.min(96, Math.max(58, 88 - index * 9 + Math.min(profile.matches.length, 3) * 2)),
+    links: jobBoards.map(board => ({ board: board.name, url: board.buildUrl(profile.title, location) }))
+  }));
+}
+
+async function handleResumeFile(event) {
+  const file = event.target.files[0];
+  const status = document.querySelector("#resumeStatus");
+  if (!file) return;
+  if (file.name.toLowerCase().endsWith(".txt")) {
+    document.querySelector("#resumeInput").value = await file.text();
+    status.textContent = `${file.name} loaded. Review the extracted text, then search.`;
+  } else {
+    status.textContent = `${file.name} attached. PDF/DOC text extraction needs a document-processing backend; paste the key text below for accurate suggestions.`;
+  }
 }
 
 function extractSkills(text) {
@@ -693,6 +802,48 @@ function loadTagged() {
 
 function loadLocks() {
   return JSON.parse(localStorage.getItem("aigyaan-locks") || "[]");
+}
+
+function loadMindBacklog() {
+  return JSON.parse(localStorage.getItem("aigyaan-mind-backlog") || "[]");
+}
+
+function addThought(event) {
+  event.preventDefault();
+  const input = document.querySelector("#mindThought");
+  const text = input.value.trim();
+  if (!text) return;
+  state.mindBacklog.unshift({ id: crypto.randomUUID(), text, createdAt: Date.now() });
+  persistMindBacklog();
+  render();
+}
+
+function deleteThought(id) {
+  state.mindBacklog = state.mindBacklog.filter(item => item.id !== id);
+  persistMindBacklog();
+  render();
+}
+
+function persistMindBacklog() {
+  localStorage.setItem("aigyaan-mind-backlog", JSON.stringify(state.mindBacklog));
+}
+
+function formatThoughtDate(value) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function beginLogin(provider) {
+  const meta = document.querySelector(`meta[name="aigyaan-${provider}-auth-url"]`);
+  const authUrl = meta?.content?.trim();
+  if (!authUrl) {
+    state.authMessage = `${provider === "google" ? "Google" : "LinkedIn"} login needs an OAuth callback URL. Add it to the matching auth meta tag in index.html.`;
+    const status = document.querySelector("#authStatus");
+    if (status) status.textContent = state.authMessage;
+    return;
+  }
+  const target = new URL(authUrl, window.location.href);
+  target.searchParams.set("returnTo", window.location.href);
+  window.location.assign(target.toString());
 }
 
 function loadDailyKeys() {

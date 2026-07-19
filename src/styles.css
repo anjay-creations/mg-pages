@@ -299,6 +299,20 @@ nav {
   background: #fff;
 }
 
+.auth-status,
+.form-status,
+.result-note,
+.empty-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+label small {
+  font-weight: 500;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -701,6 +715,53 @@ label {
   margin: 8px 0 0;
 }
 
+.suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.role-suggestion {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.role-suggestion h3,
+.role-suggestion p {
+  margin: 0;
+}
+
+.role-suggestion p {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.match-badge {
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--green);
+  background: #e7f5ef;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.role-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.role-actions a {
+  color: var(--blue);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .brand-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -750,6 +811,19 @@ label {
   height: auto;
 }
 
+.candle-frame.is-burning img {
+  transform-origin: 50% 43%;
+  animation: candle-flicker 1.35s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 13px rgba(216, 153, 43, 0.35));
+}
+
+@keyframes candle-flicker {
+  0% { transform: rotate(-0.35deg) scale(1, 1); filter: drop-shadow(0 0 9px rgba(216, 153, 43, 0.28)); }
+  35% { transform: rotate(0.4deg) scale(0.994, 1.012); }
+  68% { transform: rotate(-0.15deg) scale(1.008, 0.997); filter: drop-shadow(0 0 19px rgba(216, 153, 43, 0.48)); }
+  100% { transform: rotate(0.25deg) scale(0.998, 1.007); filter: drop-shadow(0 0 12px rgba(216, 153, 43, 0.36)); }
+}
+
 .focus-panel {
   display: grid;
   align-content: center;
@@ -778,6 +852,89 @@ label {
   grid-column: 1 / -1;
 }
 
+.mind-backlog {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.7fr) minmax(320px, 1fr);
+  gap: 18px;
+  margin-top: 20px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.mind-backlog > div:first-child p:last-child {
+  color: var(--muted);
+}
+
+.mind-form {
+  display: grid;
+  gap: 10px;
+}
+
+.mind-form textarea {
+  min-height: 110px;
+}
+
+.mind-form button {
+  justify-self: end;
+}
+
+.thought-list,
+.thought-archive {
+  grid-column: 1 / -1;
+}
+
+.thought-list {
+  display: grid;
+  gap: 9px;
+}
+
+.thought-list h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.thought-list h3 span,
+.thought-card small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.thought-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--wash);
+}
+
+.thought-card p {
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
+.thought-archive summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.thought-archive .thought-list {
+  margin-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candle-frame.is-burning img {
+    animation: none;
+  }
+}
+
 .preview-panel li {
   margin-bottom: 10px;
 }
@@ -792,6 +949,11 @@ label {
   .workspace-grid,
   .two-pane,
   .focus-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-grid,
+  .mind-backlog {
     grid-template-columns: 1fr;
   }
 

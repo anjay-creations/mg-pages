@@ -1,0 +1,35 @@
+1) First extract the data from the resume or decrpiition share by user in resume builder
+then ask questions to form the best resume for them 
+
+Get Full name
+Get linked link
+get blog link if there
+get mobile number
+
+Get information on their educational history first 
+- check if year and month for and end is there 
+- check the bachelors degree is provided 
+- check if masters degree is provided
+- college name and state is provide 
+
+Get information for working history
+- check if year and month for and end is there 
+- see if the company name is provided or not
+- description is provide 
+- see if the what done and how it helped is provided or not 
+- see if skills for profile are provided
+
+Get information on certifcations
+Get links 
+start and end date
+name of certification 
+
+
+First try to grab as much as information from description, 
+fill the details from user and fill them rest ask user to overwrite if anythign wrong 
+
+Create a summary as per the information and create one
+
+use the above information to create latex and out put of latex with download option 
+
+
