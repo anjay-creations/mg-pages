@@ -1007,6 +1007,62 @@ label {
   gap: 12px;
 }
 
+.template-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  border: 0;
+}
+
+.template-picker legend {
+  grid-column: 1 / -1;
+  margin-bottom: 9px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.template-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 5px 9px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--wash);
+  cursor: pointer;
+}
+
+.template-card.selected,
+.template-card:has(input:checked) {
+  border-color: var(--green);
+  background: #eaf6f1;
+}
+
+.template-card input {
+  grid-row: 1 / 3;
+  width: auto;
+  min-height: 0;
+}
+
+.template-card span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.review-toggle {
+  display: flex;
+  gap: 7px;
+}
+
+.review-toggle .active {
+  border-color: var(--green);
+  color: var(--green);
+  background: #eaf6f1;
+}
+
 .field-status {
   justify-self: start;
   padding: 3px 7px;
@@ -1100,6 +1156,33 @@ label {
   margin-bottom: 6px;
 }
 
+.resume-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 16px;
+  margin-top: 8px;
+  color: #48544f;
+  font-size: 0.84rem;
+}
+
+.resume-role-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+
+.resume-role-line span {
+  color: #48544f;
+  font-size: 0.86rem;
+}
+
+.resume-contact span:not(:last-child)::after {
+  content: "·";
+  margin-left: 16px;
+}
+
 .resume-preview section {
   margin-top: 18px;
 }
@@ -1113,6 +1196,80 @@ label {
 
 .resume-preview section p {
   line-height: 1.55;
+}
+
+.resume-summary {
+  max-width: 75ch;
+}
+
+.resume-summary p {
+  margin: 0 0 3px;
+  line-height: 1.45;
+}
+
+.resume-skill-groups {
+  display: grid;
+  gap: 8px;
+}
+
+.resume-skill-groups > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.28fr) 1fr;
+  gap: 10px;
+}
+
+.resume-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.resume-details {
+  display: grid;
+  gap: 5px;
+}
+
+.resume-details p {
+  margin: 0;
+}
+
+.resume-details .detail-bullet {
+  position: relative;
+  padding-left: 16px;
+}
+
+.resume-details .detail-bullet::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+}
+
+.resume-details .has-date:not(.detail-bullet) {
+  margin-top: 7px;
+  font-weight: 700;
+}
+
+.resume-preview.template-modern {
+  border-top: 8px solid var(--green);
+}
+
+.resume-preview.template-modern .resume-title {
+  border-color: var(--green);
+}
+
+.resume-preview.template-modern section h3 {
+  color: var(--green);
+}
+
+.resume-preview.template-compact {
+  padding: 28px;
+  font-size: 0.88rem;
+}
+
+.resume-preview.template-compact section {
+  margin-top: 12px;
 }
 
 .download-row {
@@ -1147,7 +1304,8 @@ label {
   .suggestion-grid,
   .mind-backlog,
   .resume-field-grid,
-  .match-report {
+  .match-report,
+  .template-picker {
     grid-template-columns: 1fr;
   }
 
