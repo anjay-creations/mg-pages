@@ -2,6 +2,7 @@ const navItems = [
   { id: "search", label: "AI Search", icon: "spark" },
   { id: "find", label: "Find Locks", icon: "search" },
   { id: "focus", label: "Focus", icon: "clock" },
+  { id: "practice", label: "Code Practice", icon: "doc" },
   { id: "resume", label: "Resume Builder", icon: "doc" },
   { id: "create", label: "Create Locks", icon: "lock" },
   { id: "tagged", label: "Tagged Gyaan", icon: "tag" }
@@ -87,6 +88,20 @@ const roleProfiles = [
   { title: "Business Analyst", terms: ["requirements", "stakeholder", "process", "business", "communication", "analysis"] }
 ];
 
+const practiceStarters = {
+  sql: `SELECT name, department, salary\nFROM employees\nWHERE salary >= 90000\nORDER BY salary DESC;`,
+  python: `numbers = [8, 3, 12, 5]\nprint(sorted(numbers))\nprint(sum(numbers))\nprint(len(numbers))`,
+  pyspark: `employees.filter(col("salary") >= 90000)\\\n  .select("name", "department", "salary")\\\n  .show()`,
+  html: `<main>\n  <h1>Interview portfolio</h1>\n  <p>Edit the HTML and run it.</p>\n  <button>View project</button>\n</main>`
+};
+
+const practiceEmployees = [
+  { name: "Asha", department: "Data", salary: 110000 },
+  { name: "Ravi", department: "Product", salary: 95000 },
+  { name: "Meera", department: "Data", salary: 88000 },
+  { name: "Kabir", department: "Design", salary: 78000 }
+];
+
 const state = {
   activeView: "search",
   roleMode: "applier",
@@ -102,7 +117,10 @@ const state = {
   focusCompleted: false,
   mindBacklog: loadMindBacklog(),
   authMessage: "",
-  resumeBuilder: loadResumeBuilder()
+  resumeBuilder: loadResumeBuilder(),
+  practiceLanguage: localStorage.getItem("aigyaan-practice-language") || "sql",
+  practiceCode: loadPracticeCode(),
+  practiceOutput: "Run the starter exercise to see output."
 };
 
 function icon(name) {
@@ -213,6 +231,7 @@ function renderNavItem(item) {
 function renderActiveView() {
   if (state.activeView === "find") return renderFindLocks();
   if (state.activeView === "focus") return renderFocus();
+  if (state.activeView === "practice") return renderPractice();
   if (state.activeView === "resume") return renderResumeBuilder();
   if (state.activeView === "create") return renderCreateLocks();
   if (state.activeView === "tagged") return renderTagged();
@@ -457,6 +476,45 @@ function renderMindBacklog() {
   `;
 }
 
+function renderPractice() {
+  const language = state.practiceLanguage;
+  const descriptions = {
+    sql: "Query the built-in employees table. Supports SELECT, WHERE, ORDER BY, LIMIT, COUNT, and department GROUP BY practice.",
+    python: "Practice basic Python variables, lists, arithmetic, and print with the browser-safe interview runner.",
+    pyspark: "Practice common DataFrame filter, select, groupBy, count, and show operations against the built-in employee data.",
+    html: "Build HTML and inspect the rendered result in an isolated browser preview."
+  };
+  return `
+    <section class="practice-page">
+      <header class="section-head">
+        <p class="eyebrow">Interview workspace</p>
+        <h1>Code Practice</h1>
+        <p>Write and run focused SQL, Python, PySpark, and HTML exercises. Code is saved locally in this browser.</p>
+      </header>
+      <div class="practice-tabs" role="tablist">
+        ${["sql", "python", "pyspark", "html"].map(item => `<button class="${language === item ? "active" : ""}" data-practice-language="${item}" type="button">${item === "pyspark" ? "PySpark" : item.toUpperCase()}</button>`).join("")}
+      </div>
+      <div class="practice-note"><strong>${language === "html" ? "Live browser runner" : "Local practice runner"}</strong><span>${descriptions[language]}</span></div>
+      <div class="practice-workspace">
+        <section class="code-panel">
+          <div class="code-panel-head"><h2>${language === "pyspark" ? "PySpark" : language.toUpperCase()} editor</h2><button class="text-btn" id="resetPractice" type="button">Reset starter</button></div>
+          <textarea id="practiceEditor" class="code-editor" spellcheck="false" aria-label="${language} code editor">${escapeHtml(state.practiceCode[language])}</textarea>
+          <div class="practice-actions"><button class="primary-btn" id="runPractice" type="button">${icon("send")} Run code</button><button class="ghost-btn" id="clearPracticeOutput" type="button">Clear output</button></div>
+        </section>
+        <section class="output-panel">
+          <div class="code-panel-head"><h2>Output</h2><span class="source-pill">${language === "html" ? "Sandboxed preview" : "Interview dataset"}</span></div>
+          ${language === "html" ? `<iframe id="htmlPracticeOutput" sandbox title="HTML output preview"></iframe>` : `<pre id="practiceOutput" aria-live="polite">${escapeHtml(state.practiceOutput)}</pre>`}
+        </section>
+      </div>
+      ${language === "sql" || language === "pyspark" ? renderPracticeDataset() : ""}
+    </section>
+  `;
+}
+
+function renderPracticeDataset() {
+  return `<details class="practice-dataset"><summary>View built-in employees dataset</summary>${renderOutputTable(practiceEmployees)}</details>`;
+}
+
 function renderResumeBuilder() {
   const builder = state.resumeBuilder;
   return `
@@ -655,6 +713,32 @@ function bindGlobalEvents() {
 }
 
 function bindViewEvents() {
+  document.querySelectorAll("[data-practice-language]").forEach(button => {
+    button.addEventListener("click", () => {
+      savePracticeEditor();
+      state.practiceLanguage = button.dataset.practiceLanguage;
+      state.practiceOutput = "Run the starter exercise to see output.";
+      localStorage.setItem("aigyaan-practice-language", state.practiceLanguage);
+      render();
+    });
+  });
+  document.querySelector("#practiceEditor")?.addEventListener("input", savePracticeEditor);
+  document.querySelector("#practiceEditor")?.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      runPracticeCode();
+    }
+  });
+  document.querySelector("#runPractice")?.addEventListener("click", runPracticeCode);
+  document.querySelector("#resetPractice")?.addEventListener("click", resetPracticeCode);
+  document.querySelector("#clearPracticeOutput")?.addEventListener("click", () => {
+    state.practiceOutput = "";
+    const output = document.querySelector("#practiceOutput");
+    if (output) output.textContent = "";
+    const frame = document.querySelector("#htmlPracticeOutput");
+    if (frame) frame.srcdoc = "";
+  });
+
   const searchForm = document.querySelector("#searchForm");
   if (searchForm) {
     searchForm.addEventListener("submit", event => {
@@ -953,6 +1037,131 @@ function loadResumeBuilder() {
   } catch {
     return defaults;
   }
+}
+
+function loadPracticeCode() {
+  try {
+    return { ...practiceStarters, ...JSON.parse(localStorage.getItem("aigyaan-practice-code") || "{}") };
+  } catch {
+    return { ...practiceStarters };
+  }
+}
+
+function savePracticeEditor() {
+  const editor = document.querySelector("#practiceEditor");
+  if (!editor) return;
+  state.practiceCode[state.practiceLanguage] = editor.value;
+  localStorage.setItem("aigyaan-practice-code", JSON.stringify(state.practiceCode));
+}
+
+function resetPracticeCode() {
+  state.practiceCode[state.practiceLanguage] = practiceStarters[state.practiceLanguage];
+  state.practiceOutput = "Starter restored. Run it to see output.";
+  localStorage.setItem("aigyaan-practice-code", JSON.stringify(state.practiceCode));
+  render();
+}
+
+function runPracticeCode() {
+  savePracticeEditor();
+  const language = state.practiceLanguage;
+  const code = state.practiceCode[language];
+  if (language === "html") {
+    document.querySelector("#htmlPracticeOutput").srcdoc = code;
+    return;
+  }
+  try {
+    state.practiceOutput = language === "sql" ? runPracticeSql(code) : language === "python" ? runPracticePython(code) : runPracticePySpark(code);
+  } catch (error) {
+    state.practiceOutput = `Error: ${error.message}`;
+  }
+  document.querySelector("#practiceOutput").textContent = state.practiceOutput;
+}
+
+function runPracticeSql(code) {
+  const query = code.trim().replace(/;$/, "");
+  if (!/^select\s/i.test(query) || !/\sfrom\s+employees\b/i.test(query)) throw new Error("Use a SELECT query against the employees table.");
+  let rows = [...practiceEmployees];
+  const where = query.match(/\bwhere\s+(\w+)\s*(=|>=|<=|>|<)\s*(['"]?)([^'"\s;]+)\3/i);
+  if (where) {
+    const [, field, operator, , rawValue] = where;
+    if (!Object.hasOwn(practiceEmployees[0], field.toLowerCase())) throw new Error(`Unknown column: ${field}`);
+    const expected = Number.isNaN(Number(rawValue)) ? rawValue.toLowerCase() : Number(rawValue);
+    rows = rows.filter(row => {
+      const actual = typeof row[field.toLowerCase()] === "string" ? row[field.toLowerCase()].toLowerCase() : row[field.toLowerCase()];
+      return operator === "=" ? actual === expected : operator === ">" ? actual > expected : operator === "<" ? actual < expected : operator === ">=" ? actual >= expected : actual <= expected;
+    });
+  }
+  if (/group\s+by\s+department/i.test(query) && /count\s*\(/i.test(query)) {
+    const counts = rows.reduce((result, row) => ({ ...result, [row.department]: (result[row.department] || 0) + 1 }), {});
+    return formatTableText(Object.entries(counts).map(([department, count]) => ({ department, count })));
+  }
+  const selected = query.match(/^select\s+(.+?)\s+from/i)?.[1].split(",").map(value => value.trim().toLowerCase()) || ["*"];
+  const columns = selected.includes("*") ? Object.keys(practiceEmployees[0]) : selected;
+  if (columns.some(column => !Object.hasOwn(practiceEmployees[0], column))) throw new Error("Select only name, department, salary, or *.");
+  const order = query.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/i);
+  if (order) rows.sort((a, b) => (a[order[1]] > b[order[1]] ? 1 : -1) * (order[2]?.toLowerCase() === "desc" ? -1 : 1));
+  const limit = Number(query.match(/\blimit\s+(\d+)/i)?.[1] || rows.length);
+  return formatTableText(rows.slice(0, limit).map(row => Object.fromEntries(columns.map(column => [column, row[column]]))));
+}
+
+function runPracticePython(code) {
+  const variables = {};
+  const output = [];
+  const evaluate = expression => {
+    const value = expression.trim();
+    if (Object.hasOwn(variables, value)) return variables[value];
+    const call = value.match(/^(sorted|sum|len|min|max)\((\w+)\)$/);
+    if (call && Object.hasOwn(variables, call[2])) {
+      const input = variables[call[2]];
+      if (call[1] === "sorted") return [...input].sort((a, b) => a - b);
+      if (call[1] === "sum") return input.reduce((total, item) => total + item, 0);
+      if (call[1] === "len") return input.length;
+      return Math[call[1]](...input);
+    }
+    if (/^\[[\d\s,.-]*\]$/.test(value)) return JSON.parse(value);
+    if (/^(['"]).*\1$/.test(value)) return value.slice(1, -1);
+    if (/^[\d\s+*/().-]+$/.test(value)) return Function(`"use strict"; return (${value})`)();
+    throw new Error(`Unsupported browser-safe expression: ${value}`);
+  };
+  code.split(/\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#")).forEach(line => {
+    const assignment = line.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
+    const print = line.match(/^print\((.*)\)$/);
+    if (assignment) variables[assignment[1]] = evaluate(assignment[2]);
+    else if (print) output.push(JSON.stringify(evaluate(print[1])).replace(/^"|"$/g, ""));
+    else throw new Error("This local runner supports assignments and print with lists, arithmetic, sorted, sum, len, min, and max.");
+  });
+  return output.join("\n") || "Program completed with no printed output.";
+}
+
+function runPracticePySpark(code) {
+  let rows = [...practiceEmployees];
+  const filter = code.match(/filter\(col\(["'](\w+)["']\)\s*(>=|<=|>|<|==)\s*(["']?)([^"')\s]+)\3\)/i);
+  if (filter) {
+    const [, field, operator, , rawValue] = filter;
+    const expected = Number.isNaN(Number(rawValue)) ? rawValue : Number(rawValue);
+    rows = rows.filter(row => operator === "==" ? row[field] === expected : operator === ">" ? row[field] > expected : operator === "<" ? row[field] < expected : operator === ">=" ? row[field] >= expected : row[field] <= expected);
+  }
+  if (/groupBy\(["']department["']\)\.count\(\)/i.test(code.replace(/\s+/g, ""))) {
+    const counts = rows.reduce((result, row) => ({ ...result, [row.department]: (result[row.department] || 0) + 1 }), {});
+    return formatTableText(Object.entries(counts).map(([department, count]) => ({ department, count })));
+  }
+  const select = code.match(/select\(([^)]+)\)/i);
+  const columns = select ? [...select[1].matchAll(/["'](\w+)["']/g)].map(match => match[1]) : Object.keys(practiceEmployees[0]);
+  if (!/\.show\(\)/i.test(code)) throw new Error("End the DataFrame practice chain with .show().");
+  return formatTableText(rows.map(row => Object.fromEntries(columns.map(column => [column, row[column]]))));
+}
+
+function formatTableText(rows) {
+  if (!rows.length) return "No rows returned.";
+  const columns = Object.keys(rows[0]);
+  const widths = columns.map(column => Math.max(column.length, ...rows.map(row => String(row[column]).length)));
+  const line = values => values.map((value, index) => String(value).padEnd(widths[index])).join(" | ");
+  return `${line(columns)}\n${widths.map(width => "-".repeat(width)).join("-+-")}\n${rows.map(row => line(columns.map(column => row[column]))).join("\n")}`;
+}
+
+function renderOutputTable(rows) {
+  const columns = Object.keys(rows[0]);
+  return `<div class="dataset-scroll"><table><thead><tr>${columns.map(column => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => `<td>${escapeHtml(row[column])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
 function persistResumeBuilder() {

@@ -1292,12 +1292,153 @@ label {
   max-width: 1180px;
 }
 
+.practice-page {
+  max-width: 1240px;
+}
+
+.practice-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.practice-tabs button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+  font-weight: 800;
+}
+
+.practice-tabs button.active {
+  border-color: var(--green);
+  color: #fff;
+  background: var(--green);
+}
+
+.practice-note {
+  display: flex;
+  gap: 10px 18px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--blue);
+  background: #edf4fa;
+}
+
+.practice-note span {
+  color: var(--muted);
+}
+
+.practice-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 14px;
+}
+
+.code-panel,
+.output-panel,
+.practice-dataset {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.code-panel,
+.output-panel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.code-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.code-panel-head h2 {
+  margin: 0;
+}
+
+.code-editor,
+.output-panel pre {
+  min-height: 410px;
+  margin: 0;
+  padding: 18px;
+  border: 0;
+  border-radius: 0;
+  color: #e8f0ec;
+  background: #17201c;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.output-panel pre {
+  overflow: auto;
+  white-space: pre;
+}
+
+#htmlPracticeOutput {
+  width: 100%;
+  min-height: 460px;
+  border: 0;
+  background: #fff;
+}
+
+.practice-actions {
+  display: flex;
+  gap: 9px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.practice-dataset {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.practice-dataset summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.dataset-scroll {
+  overflow: auto;
+  margin-top: 12px;
+}
+
+.dataset-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dataset-scroll th,
+.dataset-scroll td {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
 @media (max-width: 1040px) {
   #app,
   .chat-layout,
   .workspace-grid,
   .two-pane,
   .focus-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-workspace {
     grid-template-columns: 1fr;
   }
 
