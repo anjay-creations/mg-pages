@@ -89,7 +89,7 @@ const roleProfiles = [
 ];
 
 const practiceStarters = {
-  sql: `SELECT name, department, salary\nFROM employees\nWHERE salary >= 90000\nORDER BY salary DESC;`,
+  sql: `SELECT c.name, o.id, p.name, oi.quantity\nFROM customers c\nJOIN orders o ON c.id = o.customer_id\nJOIN order_items oi ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nORDER BY o.id;`,
   python: `numbers = [8, 3, 12, 5]\nprint(sorted(numbers))\nprint(sum(numbers))\nprint(len(numbers))`,
   pyspark: `employees.filter(col("salary") >= 90000)\\\n  .select("name", "department", "salary")\\\n  .show()`,
   html: `<main>\n  <h1>Interview portfolio</h1>\n  <p>Edit the HTML and run it.</p>\n  <button>View project</button>\n</main>`
@@ -101,6 +101,37 @@ const practiceEmployees = [
   { name: "Meera", department: "Data", salary: 88000 },
   { name: "Kabir", department: "Design", salary: 78000 }
 ];
+
+const sqlPracticeTables = {
+  customers: [
+    { id: 1, name: "Asha Mehta", email: "asha@example.com", city: "Mumbai" },
+    { id: 2, name: "Ravi Kumar", email: "ravi@example.com", city: "Bengaluru" },
+    { id: 3, name: "Meera Shah", email: "meera@example.com", city: "Pune" },
+    { id: 4, name: "Kabir Singh", email: "kabir@example.com", city: "Delhi" }
+  ],
+  products: [
+    { id: 101, name: "Mechanical Keyboard", category: "Accessories", price: 4500 },
+    { id: 102, name: "USB-C Hub", category: "Accessories", price: 2800 },
+    { id: 103, name: "Monitor", category: "Displays", price: 18000 },
+    { id: 104, name: "Webcam", category: "Video", price: 6200 }
+  ],
+  orders: [
+    { id: 1001, customer_id: 1, order_date: "2026-07-02", status: "Delivered" },
+    { id: 1002, customer_id: 2, order_date: "2026-07-05", status: "Shipped" },
+    { id: 1003, customer_id: 1, order_date: "2026-07-11", status: "Delivered" },
+    { id: 1004, customer_id: 3, order_date: "2026-07-18", status: "Processing" },
+    { id: 1005, customer_id: 4, order_date: "2026-07-22", status: "Cancelled" }
+  ],
+  order_items: [
+    { id: 1, order_id: 1001, product_id: 101, quantity: 1, unit_price: 4500 },
+    { id: 2, order_id: 1001, product_id: 102, quantity: 2, unit_price: 2800 },
+    { id: 3, order_id: 1002, product_id: 103, quantity: 1, unit_price: 18000 },
+    { id: 4, order_id: 1003, product_id: 104, quantity: 1, unit_price: 6200 },
+    { id: 5, order_id: 1004, product_id: 101, quantity: 2, unit_price: 4500 },
+    { id: 6, order_id: 1004, product_id: 104, quantity: 1, unit_price: 6200 },
+    { id: 7, order_id: 1005, product_id: 102, quantity: 1, unit_price: 2800 }
+  ]
+};
 
 const state = {
   activeView: "search",
@@ -479,7 +510,7 @@ function renderMindBacklog() {
 function renderPractice() {
   const language = state.practiceLanguage;
   const descriptions = {
-    sql: "Query the built-in employees table. Supports SELECT, WHERE, ORDER BY, LIMIT, COUNT, and department GROUP BY practice.",
+    sql: "Query customers, orders, order_items, and products. Supports SELECT, JOIN, WHERE, ORDER BY, LIMIT, and COUNT practice.",
     python: "Practice basic Python variables, lists, arithmetic, and print with the browser-safe interview runner.",
     pyspark: "Practice common DataFrame filter, select, groupBy, count, and show operations against the built-in employee data.",
     html: "Build HTML and inspect the rendered result in an isolated browser preview."
@@ -512,7 +543,8 @@ function renderPractice() {
 }
 
 function renderPracticeDataset() {
-  return `<details class="practice-dataset"><summary>View built-in employees dataset</summary>${renderOutputTable(practiceEmployees)}</details>`;
+  if (state.practiceLanguage === "pyspark") return `<details class="practice-dataset"><summary>View built-in employees dataset</summary>${renderOutputTable(practiceEmployees)}</details>`;
+  return `<details class="practice-dataset" open><summary>View four-table SQL dataset</summary><div class="sql-table-tabs">${Object.entries(sqlPracticeTables).map(([name, rows]) => `<section><h3>${name}</h3>${renderOutputTable(rows)}</section>`).join("")}</div></details>`;
 }
 
 function renderResumeBuilder() {
@@ -1079,29 +1111,68 @@ function runPracticeCode() {
 
 function runPracticeSql(code) {
   const query = code.trim().replace(/;$/, "");
-  if (!/^select\s/i.test(query) || !/\sfrom\s+employees\b/i.test(query)) throw new Error("Use a SELECT query against the employees table.");
-  let rows = [...practiceEmployees];
-  const where = query.match(/\bwhere\s+(\w+)\s*(=|>=|<=|>|<)\s*(['"]?)([^'"\s;]+)\3/i);
+  const from = query.match(/\bfrom\s+(customers|orders|order_items|products)(?:\s+(?!join\b|where\b|order\b|limit\b)(\w+))?/i);
+  if (!/^select\s/i.test(query) || !from) throw new Error("Use SELECT with customers, orders, order_items, or products.");
+  const baseTable = from[1].toLowerCase();
+  const baseAlias = (from[2] || baseTable).toLowerCase();
+  let rows = sqlPracticeTables[baseTable].map(row => qualifySqlRow(row, baseAlias));
+  const joins = [...query.matchAll(/\bjoin\s+(customers|orders|order_items|products)(?:\s+(?!on\b)(\w+))?\s+on\s+([\w.]+)\s*=\s*([\w.]+)/gi)];
+  joins.forEach(join => {
+    const table = join[1].toLowerCase();
+    const alias = (join[2] || table).toLowerCase();
+    const rightRows = sqlPracticeTables[table].map(row => qualifySqlRow(row, alias));
+    rows = rows.flatMap(left => rightRows.filter(right => readSqlField({ ...left, ...right }, join[3]) === readSqlField({ ...left, ...right }, join[4])).map(right => ({ ...left, ...right })));
+  });
+  const where = query.match(/\bwhere\s+([\w.]+)\s*(=|>=|<=|>|<)\s*(['"]?)([^'"\s;]+)\3/i);
   if (where) {
     const [, field, operator, , rawValue] = where;
-    if (!Object.hasOwn(practiceEmployees[0], field.toLowerCase())) throw new Error(`Unknown column: ${field}`);
     const expected = Number.isNaN(Number(rawValue)) ? rawValue.toLowerCase() : Number(rawValue);
     rows = rows.filter(row => {
-      const actual = typeof row[field.toLowerCase()] === "string" ? row[field.toLowerCase()].toLowerCase() : row[field.toLowerCase()];
+      const fieldValue = readSqlField(row, field);
+      if (fieldValue === undefined) throw new Error(`Unknown or ambiguous column: ${field}`);
+      const actual = typeof fieldValue === "string" ? fieldValue.toLowerCase() : fieldValue;
       return operator === "=" ? actual === expected : operator === ">" ? actual > expected : operator === "<" ? actual < expected : operator === ">=" ? actual >= expected : actual <= expected;
     });
   }
-  if (/group\s+by\s+department/i.test(query) && /count\s*\(/i.test(query)) {
-    const counts = rows.reduce((result, row) => ({ ...result, [row.department]: (result[row.department] || 0) + 1 }), {});
-    return formatTableText(Object.entries(counts).map(([department, count]) => ({ department, count })));
+  const group = query.match(/\bgroup\s+by\s+([\w.]+)/i);
+  if (group && /count\s*\(/i.test(query)) {
+    const counts = rows.reduce((result, row) => {
+      const value = readSqlField(row, group[1]);
+      return { ...result, [value]: (result[value] || 0) + 1 };
+    }, {});
+    return formatTableText(Object.entries(counts).map(([value, count]) => ({ [group[1]]: value, count })));
   }
-  const selected = query.match(/^select\s+(.+?)\s+from/i)?.[1].split(",").map(value => value.trim().toLowerCase()) || ["*"];
-  const columns = selected.includes("*") ? Object.keys(practiceEmployees[0]) : selected;
-  if (columns.some(column => !Object.hasOwn(practiceEmployees[0], column))) throw new Error("Select only name, department, salary, or *.");
-  const order = query.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/i);
-  if (order) rows.sort((a, b) => (a[order[1]] > b[order[1]] ? 1 : -1) * (order[2]?.toLowerCase() === "desc" ? -1 : 1));
+  const selected = query.match(/^select\s+(.+?)\s+from/i)?.[1].split(",").map(value => value.trim()) || ["*"];
+  const order = query.match(/order\s+by\s+([\w.]+)(?:\s+(asc|desc))?/i);
+  if (order) rows.sort((a, b) => {
+    const first = readSqlField(a, order[1]);
+    const second = readSqlField(b, order[1]);
+    return (first === second ? 0 : first > second ? 1 : -1) * (order[2]?.toLowerCase() === "desc" ? -1 : 1);
+  });
   const limit = Number(query.match(/\blimit\s+(\d+)/i)?.[1] || rows.length);
-  return formatTableText(rows.slice(0, limit).map(row => Object.fromEntries(columns.map(column => [column, row[column]]))));
+  if (selected.length === 1 && /^count\s*\(\s*\*\s*\)/i.test(selected[0])) return formatTableText([{ count: rows.length }]);
+  const outputRows = rows.slice(0, limit).map(row => {
+    if (selected.includes("*")) return row;
+    return Object.fromEntries(selected.map(column => {
+      const aliasMatch = column.match(/^([\w.]+)(?:\s+as\s+(\w+))?$/i);
+      if (!aliasMatch) throw new Error(`Unsupported selected expression: ${column}`);
+      const value = readSqlField(row, aliasMatch[1]);
+      if (value === undefined) throw new Error(`Unknown or ambiguous column: ${aliasMatch[1]}`);
+      return [aliasMatch[2] || aliasMatch[1], value];
+    }));
+  });
+  return formatTableText(outputRows);
+}
+
+function qualifySqlRow(row, alias) {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [`${alias}.${key}`, value]));
+}
+
+function readSqlField(row, field) {
+  const normalized = field.toLowerCase();
+  if (Object.hasOwn(row, normalized)) return row[normalized];
+  const matches = Object.entries(row).filter(([key]) => key.endsWith(`.${normalized}`));
+  return matches.length === 1 ? matches[0][1] : undefined;
 }
 
 function runPracticePython(code) {
