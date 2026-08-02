@@ -1,3 +1,5 @@
+import sqlite3InitModule from "./vendor/sqlite/index.mjs";
+
 const navItems = [
   { id: "search", label: "AI Search", icon: "spark" },
   { id: "find", label: "Find Locks", icon: "search" },
@@ -89,7 +91,7 @@ const roleProfiles = [
 ];
 
 const practiceStarters = {
-  sql: `SELECT c.name, o.id, p.name, oi.quantity\nFROM customers c\nJOIN orders o ON c.id = o.customer_id\nJOIN order_items oi ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nORDER BY o.id;`,
+  sql: `SELECT c.name AS customer_name, o.id AS order_id,\n       p.name AS product_name, oi.quantity\nFROM customers c\nJOIN orders o ON c.id = o.customer_id\nJOIN order_items oi ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nORDER BY o.id;`,
   python: `numbers = [8, 3, 12, 5]\nprint(sorted(numbers))\nprint(sum(numbers))\nprint(len(numbers))`,
   pyspark: `employees.filter(col("salary") >= 90000)\\\n  .select("name", "department", "salary")\\\n  .show()`,
   html: `<main>\n  <h1>Interview portfolio</h1>\n  <p>Edit the HTML and run it.</p>\n  <button>View project</button>\n</main>`
@@ -107,7 +109,8 @@ const sqlPracticeTables = {
     { id: 1, name: "Asha Mehta", email: "asha@example.com", city: "Mumbai" },
     { id: 2, name: "Ravi Kumar", email: "ravi@example.com", city: "Bengaluru" },
     { id: 3, name: "Meera Shah", email: "meera@example.com", city: "Pune" },
-    { id: 4, name: "Kabir Singh", email: "kabir@example.com", city: "Delhi" }
+    { id: 4, name: "Kabir Singh", email: "kabir@example.com", city: "Delhi" },
+    { id: 5, name: "Naina Rao", email: "naina@example.com", city: "Hyderabad" }
   ],
   products: [
     { id: 101, name: "Mechanical Keyboard", category: "Accessories", price: 4500 },
@@ -132,6 +135,9 @@ const sqlPracticeTables = {
     { id: 7, order_id: 1005, product_id: 102, quantity: 1, unit_price: 2800 }
   ]
 };
+
+let sqlitePracticeDb = null;
+let sqlitePracticeInitialization = null;
 
 const state = {
   activeView: "search",
@@ -200,6 +206,7 @@ function render() {
   bindGlobalEvents();
   bindViewEvents();
   tickTimers();
+  if (state.activeView === "practice" && state.practiceLanguage === "sql") initializeSqlitePractice();
 }
 
 function renderTopNav() {
@@ -510,7 +517,7 @@ function renderMindBacklog() {
 function renderPractice() {
   const language = state.practiceLanguage;
   const descriptions = {
-    sql: "Query customers, orders, order_items, and products. Supports SELECT, JOIN, WHERE, ORDER BY, LIMIT, and COUNT practice.",
+    sql: "Query customers, orders, order_items, and products. Supports SELECT, JOIN, LEFT JOIN, WHERE, IS NULL, ORDER BY, LIMIT, GROUP BY, and COUNT.",
     python: "Practice basic Python variables, lists, arithmetic, and print with the browser-safe interview runner.",
     pyspark: "Practice common DataFrame filter, select, groupBy, count, and show operations against the built-in employee data.",
     html: "Build HTML and inspect the rendered result in an isolated browser preview."
@@ -530,7 +537,7 @@ function renderPractice() {
         <section class="code-panel">
           <div class="code-panel-head"><h2>${language === "pyspark" ? "PySpark" : language.toUpperCase()} editor</h2><button class="text-btn" id="resetPractice" type="button">Reset starter</button></div>
           <textarea id="practiceEditor" class="code-editor" spellcheck="false" aria-label="${language} code editor">${escapeHtml(state.practiceCode[language])}</textarea>
-          <div class="practice-actions"><button class="primary-btn" id="runPractice" type="button">${icon("send")} Run code</button><button class="ghost-btn" id="clearPracticeOutput" type="button">Clear output</button></div>
+          <div class="practice-actions"><button class="primary-btn" id="runPractice" type="button">${icon("send")} Run code</button><button class="ghost-btn" id="clearPracticeOutput" type="button">Clear output</button>${language === "sql" ? `<button class="ghost-btn" id="resetSqlDatabase" type="button">Reset database</button>` : ""}</div>
         </section>
         <section class="output-panel">
           <div class="code-panel-head"><h2>Output</h2><span class="source-pill">${language === "html" ? "Sandboxed preview" : "Interview dataset"}</span></div>
@@ -763,6 +770,7 @@ function bindViewEvents() {
   });
   document.querySelector("#runPractice")?.addEventListener("click", runPracticeCode);
   document.querySelector("#resetPractice")?.addEventListener("click", resetPracticeCode);
+  document.querySelector("#resetSqlDatabase")?.addEventListener("click", resetSqlitePractice);
   document.querySelector("#clearPracticeOutput")?.addEventListener("click", () => {
     state.practiceOutput = "";
     const output = document.querySelector("#practiceOutput");
@@ -1093,7 +1101,7 @@ function resetPracticeCode() {
   render();
 }
 
-function runPracticeCode() {
+async function runPracticeCode() {
   savePracticeEditor();
   const language = state.practiceLanguage;
   const code = state.practiceCode[language];
@@ -1102,77 +1110,66 @@ function runPracticeCode() {
     return;
   }
   try {
-    state.practiceOutput = language === "sql" ? runPracticeSql(code) : language === "python" ? runPracticePython(code) : runPracticePySpark(code);
+    state.practiceOutput = language === "sql" ? await runSqlitePractice(code) : language === "python" ? runPracticePython(code) : runPracticePySpark(code);
   } catch (error) {
     state.practiceOutput = `Error: ${error.message}`;
   }
   document.querySelector("#practiceOutput").textContent = state.practiceOutput;
 }
 
-function runPracticeSql(code) {
-  const query = code.trim().replace(/;$/, "");
-  const from = query.match(/\bfrom\s+(customers|orders|order_items|products)(?:\s+(?!join\b|where\b|order\b|limit\b)(\w+))?/i);
-  if (!/^select\s/i.test(query) || !from) throw new Error("Use SELECT with customers, orders, order_items, or products.");
-  const baseTable = from[1].toLowerCase();
-  const baseAlias = (from[2] || baseTable).toLowerCase();
-  let rows = sqlPracticeTables[baseTable].map(row => qualifySqlRow(row, baseAlias));
-  const joins = [...query.matchAll(/\bjoin\s+(customers|orders|order_items|products)(?:\s+(?!on\b)(\w+))?\s+on\s+([\w.]+)\s*=\s*([\w.]+)/gi)];
-  joins.forEach(join => {
-    const table = join[1].toLowerCase();
-    const alias = (join[2] || table).toLowerCase();
-    const rightRows = sqlPracticeTables[table].map(row => qualifySqlRow(row, alias));
-    rows = rows.flatMap(left => rightRows.filter(right => readSqlField({ ...left, ...right }, join[3]) === readSqlField({ ...left, ...right }, join[4])).map(right => ({ ...left, ...right })));
-  });
-  const where = query.match(/\bwhere\s+([\w.]+)\s*(=|>=|<=|>|<)\s*(['"]?)([^'"\s;]+)\3/i);
-  if (where) {
-    const [, field, operator, , rawValue] = where;
-    const expected = Number.isNaN(Number(rawValue)) ? rawValue.toLowerCase() : Number(rawValue);
-    rows = rows.filter(row => {
-      const fieldValue = readSqlField(row, field);
-      if (fieldValue === undefined) throw new Error(`Unknown or ambiguous column: ${field}`);
-      const actual = typeof fieldValue === "string" ? fieldValue.toLowerCase() : fieldValue;
-      return operator === "=" ? actual === expected : operator === ">" ? actual > expected : operator === "<" ? actual < expected : operator === ">=" ? actual >= expected : actual <= expected;
+async function initializeSqlitePractice() {
+  if (sqlitePracticeDb) return sqlitePracticeDb;
+  if (sqlitePracticeInitialization) return sqlitePracticeInitialization;
+  sqlitePracticeInitialization = sqlite3InitModule({
+    print: () => {},
+    printErr: error => console.error("SQLite:", error)
+  }).then(sqlite3 => {
+    const db = new sqlite3.oo1.DB(":memory:", "c");
+    db.exec(`
+      PRAGMA foreign_keys = ON;
+      CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT, city TEXT);
+      CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, category TEXT, price REAL NOT NULL);
+      CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, order_date TEXT NOT NULL, status TEXT NOT NULL, FOREIGN KEY (customer_id) REFERENCES customers(id));
+      CREATE TABLE order_items (id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, quantity INTEGER NOT NULL, unit_price REAL NOT NULL, FOREIGN KEY (order_id) REFERENCES orders(id), FOREIGN KEY (product_id) REFERENCES products(id));
+    `);
+    Object.entries(sqlPracticeTables).forEach(([table, rows]) => {
+      rows.forEach(row => {
+        const columns = Object.keys(row);
+        db.exec({
+          sql: `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+          bind: Object.values(row)
+        });
+      });
     });
-  }
-  const group = query.match(/\bgroup\s+by\s+([\w.]+)/i);
-  if (group && /count\s*\(/i.test(query)) {
-    const counts = rows.reduce((result, row) => {
-      const value = readSqlField(row, group[1]);
-      return { ...result, [value]: (result[value] || 0) + 1 };
-    }, {});
-    return formatTableText(Object.entries(counts).map(([value, count]) => ({ [group[1]]: value, count })));
-  }
-  const selected = query.match(/^select\s+(.+?)\s+from/i)?.[1].split(",").map(value => value.trim()) || ["*"];
-  const order = query.match(/order\s+by\s+([\w.]+)(?:\s+(asc|desc))?/i);
-  if (order) rows.sort((a, b) => {
-    const first = readSqlField(a, order[1]);
-    const second = readSqlField(b, order[1]);
-    return (first === second ? 0 : first > second ? 1 : -1) * (order[2]?.toLowerCase() === "desc" ? -1 : 1);
+    sqlitePracticeDb = db;
+    const status = document.querySelector("#practiceOutput");
+    if (status && state.practiceOutput.includes("Run the starter")) status.textContent = `SQLite ${sqlite3.version.libVersion} ready. Run the starter exercise.`;
+    return db;
+  }).catch(error => {
+    sqlitePracticeInitialization = null;
+    throw new Error(`SQLite could not initialize: ${error.message}`);
   });
-  const limit = Number(query.match(/\blimit\s+(\d+)/i)?.[1] || rows.length);
-  if (selected.length === 1 && /^count\s*\(\s*\*\s*\)/i.test(selected[0])) return formatTableText([{ count: rows.length }]);
-  const outputRows = rows.slice(0, limit).map(row => {
-    if (selected.includes("*")) return row;
-    return Object.fromEntries(selected.map(column => {
-      const aliasMatch = column.match(/^([\w.]+)(?:\s+as\s+(\w+))?$/i);
-      if (!aliasMatch) throw new Error(`Unsupported selected expression: ${column}`);
-      const value = readSqlField(row, aliasMatch[1]);
-      if (value === undefined) throw new Error(`Unknown or ambiguous column: ${aliasMatch[1]}`);
-      return [aliasMatch[2] || aliasMatch[1], value];
-    }));
-  });
-  return formatTableText(outputRows);
+  return sqlitePracticeInitialization;
 }
 
-function qualifySqlRow(row, alias) {
-  return Object.fromEntries(Object.entries(row).map(([key, value]) => [`${alias}.${key}`, value]));
+async function runSqlitePractice(code) {
+  const db = await initializeSqlitePractice();
+  const rows = [];
+  const columnNames = [];
+  db.exec({ sql: code, rowMode: "object", resultRows: rows, columnNames });
+  if (rows.length) return formatTableText(rows);
+  return columnNames.length ? "No rows returned." : "Statement executed successfully.";
 }
 
-function readSqlField(row, field) {
-  const normalized = field.toLowerCase();
-  if (Object.hasOwn(row, normalized)) return row[normalized];
-  const matches = Object.entries(row).filter(([key]) => key.endsWith(`.${normalized}`));
-  return matches.length === 1 ? matches[0][1] : undefined;
+async function resetSqlitePractice() {
+  sqlitePracticeDb?.close();
+  sqlitePracticeDb = null;
+  sqlitePracticeInitialization = null;
+  state.practiceOutput = "Resetting the four SQLite tables...";
+  document.querySelector("#practiceOutput").textContent = state.practiceOutput;
+  await initializeSqlitePractice();
+  state.practiceOutput = "Database reset. The four original tables and records are ready.";
+  document.querySelector("#practiceOutput").textContent = state.practiceOutput;
 }
 
 function runPracticePython(code) {

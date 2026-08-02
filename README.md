@@ -1,6 +1,6 @@
 # AI Gyaan
 
-A dependency-free prototype for an AI agent workspace focused on recruitment, job search, interview preparation, resume building, tagged learning, focus practice, and hirer lock creation.
+A static AI agent workspace focused on recruitment, job search, interview preparation, resume building, tagged learning, focus practice, and hirer lock creation. SQLite WebAssembly is vendored locally for real in-browser SQL practice.
 
 ## Run
 
@@ -32,6 +32,7 @@ Custom domain → maigyaan.in
 - Profile button in the top navigation opens a right-side profile/settings drawer with configuration-ready Google and LinkedIn login entry points.
 - Top-brand career page shortcuts for Google, Microsoft, JP Morgan, Morgan Stanley, Wells Fargo, Amazon, and Flipkart.
 - Focus section with a flickering candle while the timer runs, an honest completion flow, and a local mind backlog (latest 10 plus archive and deletion).
+- Code Practice workspace with a real SQLite WebAssembly database containing customers, orders, order items, and products, plus local Python/PySpark practice subsets and a sandboxed HTML preview.
 - Standalone Resume Builder screen for future resume parsing, missing-detail review, ATS drafting, and recruiter keyword guidance.
 - Create Locks workflow for hirers/problem owners.
 
