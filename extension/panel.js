@@ -1,0 +1,13 @@
+import {fields} from './core.mjs';
+let profile=(await chrome.storage.local.get('profile')).profile||{};
+const status=document.querySelector('#status');
+function render(){const target=document.querySelector('#answers');target.replaceChildren();for(const [key,name] of Object.entries(fields)){const label=document.createElement('label');label.textContent=name;const input=document.createElement('input');input.name=key;input.value=profile[key]||'';label.append(input);target.append(label);}}
+function values(){return Object.fromEntries([...document.querySelectorAll('#answers input')].map(i=>[i.name,i.value]));}
+async function save(){profile=values();await chrome.storage.local.set({profile});status.textContent='Answers saved on this device.';}
+async function fill(){await save();try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});await chrome.scripting.executeScript({target:{tabId:tab.id},files:['fill.js']});const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:(p,a)=>fillApplication(p,a),args:[profile,document.querySelector('#automatic').checked]});const {filled,unknown}=result[0].result;status.textContent=`Filled ${filled} fields. ${unknown} empty fields need review. ${document.querySelector('#automatic').checked?'Watching for new fields.':''}`;}catch{status.textContent='Open an application webpage and click the extension icon on that tab, then retry. Browser internal pages cannot be filled.';}}
+render();
+document.querySelector('#save').onclick=save;
+document.querySelector('#fill').onclick=fill;
+document.querySelector('#automatic').onchange=fill;
+document.querySelector('#import').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>100000)throw Error();const data=JSON.parse(await file.text());if(!data||Array.isArray(data)||typeof data!=='object')throw Error();profile=Object.fromEntries(Object.keys(fields).filter(k=>typeof data[k]==='string').map(k=>[k,data[k].slice(0,500)]));await chrome.storage.local.set({profile});render();status.textContent='Profile imported. Review the answers below.';}catch{status.textContent='Could not import. Choose the profile JSON exported from AI Gyaan.';}};
+document.querySelector('#delete').onclick=async()=>{await chrome.storage.local.remove('profile');profile={};render();document.querySelector('#automatic').checked=false;try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>{window.__gyaanObserver?.disconnect();clearTimeout(window.__gyaanTimer);}});}catch{}status.textContent='Stored answers deleted. Previously filled forms are unchanged.';};

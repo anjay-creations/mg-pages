@@ -1546,3 +1546,30 @@ label {
     font-size: 2rem;
   }
 }
+
+/* Career workspace and accessible colour themes */
+body { background: var(--wash); }
+.sidebar { background: var(--panel); overflow-y:auto; }
+.career-page { max-width:1120px; margin:auto; }
+.career-page > h1 { max-width:800px; font-size:clamp(2rem,4vw,3.7rem); letter-spacing:-.045em; line-height:1.12; }
+.career-page > p { max-width:750px; color:var(--muted); line-height:1.7; }
+.career-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:30px 0; }
+.career-stats article { display:flex; gap:16px; align-items:center; padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+.career-stats strong { color:var(--green); font-size:1.6rem; }
+.board-links { display:flex; flex-wrap:wrap; gap:12px; }
+.board-links a { color:var(--blue); padding:12px; background:var(--wash); border:1px solid var(--line); border-radius:8px; }
+#careerResults { display:grid; gap:16px; margin-bottom:24px; }
+#letterForm { display:grid; gap:16px; }
+#letterDraft { min-height:300px; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+:root[data-theme="dark"] { color-scheme:dark; --ink:#e6eee9; --muted:#a6b9ae; --line:#35483e; --panel:#19271f; --wash:#101b15; --mint:#254d3b; --green:#76d7ad; --blue:#92bff2; --coral:#ffac99; --gold:#e4bf68; --shadow:0 12px 36px #0003; }
+[data-theme="dark"] :is(.resume-section,.job-card,.role-suggestion,.brand-link,.profile-drawer,.chip,.practice-tabs button,.code-panel,.output-panel,.practice-dataset,.mind-backlog,.context-panel,.tool-panel,.preview-panel,.message.assistant,.tagged-card,.app-topnav,.chat-main) { background:var(--panel); color:var(--ink); }
+[data-theme="dark"] :is(input,textarea,select,.ghost-btn) { background:var(--wash); color:var(--ink); }
+[data-theme="dark"] :is(.primary-btn,.match-score,.practice-tabs button.active) { background:#28674c; color:#fff; }
+[data-theme="dark"] :is(.missing-panel,.match-report,.tailoring-basis,.practice-note,.template-card.selected,.resume-steps span.active,.match-badge,.field-status,.template-card:has(input:checked)) { background:#26392c; color:var(--ink); }
+[data-theme="dark"] .resume-preview { background:#fff; color:#18201d; --ink:#18201d; --muted:#48544f; }
+[data-theme="dark"] .candle-frame { background:var(--panel); }
+@media(max-width:720px) { .career-stats { grid-template-columns:1fr; } }
+[data-theme="dark"] :is(.role-card,.mini-panel,.focus-panel) { background:var(--panel); }
+[data-theme="dark"] :is(.nav-item.active,.nav-item:hover) { background:#263d30; }
+[data-theme="dark"] .segmented button.active { background:#28674c; }

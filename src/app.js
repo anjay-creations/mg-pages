@@ -1,6 +1,12 @@
+document.documentElement.dataset.theme = localStorage.getItem("career-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 import sqlite3InitModule from "./vendor/sqlite/index.mjs";
 
+import { careerView, bindCareer } from "./career.js";
+
 const navItems = [
+  { id: "jobs", label: "Find your next role", icon: "briefcase" },
+  { id: "candidate", label: "Application passport", icon: "user" },
+  { id: "prep", label: "Interview studio", icon: "doc" },
   { id: "search", label: "AI Search", icon: "spark" },
   { id: "find", label: "Find Locks", icon: "search" },
   { id: "focus", label: "Focus", icon: "clock" },
@@ -140,7 +146,7 @@ let sqlitePracticeDb = null;
 let sqlitePracticeInitialization = null;
 
 const state = {
-  activeView: "search",
+  activeView: "jobs",
   roleMode: "applier",
   messages: [],
   tagged: loadTagged(),
@@ -181,7 +187,7 @@ function render() {
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">${icon("spark")}</div>
-        <div><strong>AI Gyaan</strong><span>Locks and Keys intelligence</span></div>
+        <div><strong>AI Gyaan</strong><span>Your career, thoughtfully guided</span></div>
       </div>
       <nav>${navItems.map(renderNavItem).join("")}</nav>
       <div class="role-card">
@@ -216,7 +222,7 @@ function renderTopNav() {
         <span class="source-pill">Candidate Console</span>
         <strong>${state.dailyKeys.remaining} / ${state.dailyKeys.total} keys left today</strong>
       </div>
-      <div class="topnav-actions">
+      <div class="topnav-actions"><button class="ghost-btn" id="themeToggle" type="button">Toggle light / dark</button>
         <div class="key-meter" aria-label="${state.dailyKeys.remaining} application keys remaining">
           ${Array.from({ length: state.dailyKeys.total }, (_, index) => `<span class="${index < state.dailyKeys.remaining ? "available" : ""}"></span>`).join("")}
         </div>
@@ -236,7 +242,7 @@ function renderProfileDrawer() {
         <div class="profile-large"><img src="./src/assets/profile.svg" alt="" /></div>
         <button class="ghost-btn" id="closeProfile" type="button">Close</button>
       </div>
-      <h2>Anjali Candidate</h2>
+      <h2>Candidate profile</h2>
       <p>AI and product builder preparing for stronger role matches.</p>
       <div class="profile-detail"><span>Daily application keys</span><strong>${state.dailyKeys.remaining} remaining</strong></div>
       <div class="profile-detail"><span>Workspace mode</span><strong>${state.roleMode === "applier" ? "Key / Applier" : "Hirer"}</strong></div>
@@ -267,6 +273,7 @@ function renderNavItem(item) {
 }
 
 function renderActiveView() {
+  if (["jobs", "candidate", "prep"].includes(state.activeView)) return careerView(state.activeView);
   if (state.activeView === "find") return renderFindLocks();
   if (state.activeView === "focus") return renderFocus();
   if (state.activeView === "practice") return renderPractice();
@@ -725,6 +732,11 @@ function renderTagged() {
 }
 
 function bindGlobalEvents() {
+  document.querySelector("#themeToggle")?.addEventListener("click", () => {
+    const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("career-theme", theme);
+  });
   document.querySelectorAll("[data-view]").forEach(button => {
     button.addEventListener("click", () => {
       state.activeView = button.dataset.view;
@@ -752,6 +764,7 @@ function bindGlobalEvents() {
 }
 
 function bindViewEvents() {
+  bindCareer(state.activeView);
   document.querySelectorAll("[data-practice-language]").forEach(button => {
     button.addEventListener("click", () => {
       savePracticeEditor();

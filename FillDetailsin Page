@@ -1,0 +1,56 @@
+Add an extension option over the google page that fills up details with out hitting next or enter 
+everytime, it shall keep a tab open in right with the answers also fill the answers in form if it allows. 
+this would make it semi aceptable. 
+Make in the form of getsmart website that applies for you in the companies. 
+
+Also the code correctly the model to search for all available jobs that match your resume 
+in sites like LinkedIn, Naukri, Mosterjobs, foundit, cutshort, getsmart, indeed, and direct from sites
+the jobs should be posted latest. 
+filter option should be there to capture the time postest, the percentage match with cv. 
+and the missing things your resume has to increase chances. It shall also prepare CV, and cover letter for you to send out to the hiring manager. 
+
+
+Extract the preparation guides and question/answer quiz portal for each job role. 
+
+there would be questions like 
+* Indicates a required field
+How Did You Hear About Us?*
+LinkedIn
+
+Have you previously worked for Harris?*
+
+Yes
+
+No
+Country*
+India <myanswer - ask for the user about these details once and then they should n't need to reshare with you again- you may use their cache or we store them in a storage system>
+Name
+Given Name(s)*
+Anjali <myanswer>
+Family Name*
+Vashisth <myanswer>
+Local Given Name(s)
+Local Family Name
+Address
+Address Line 1*
+PuppalGuda <myanswer>
+City*
+Hyderabad <myanswer>
+Postal Code*
+500089 <myanswer>
+State*
+Telangāna <myanswer>
+Email Address
+jobsforanjalivashisth@gmail.com <myanswer>
+Phone 
+Phone Device Type*
+Mobile
+Country Phone Code*
+1 item selected, India (+91) <myanswer>
+
+Phone Number*
+9943750590 <myanswer>
+Phone Extension
+
+
+

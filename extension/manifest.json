@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "AI Gyaan Application Companion",
+  "version": "1.0.0",
+  "minimum_chrome_version": "116",
+  "description": "Keep your saved answers beside application forms and fill supported fields after review.",
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel"],
+  "action": {"default_title": "Open application companion"},
+  "background": {"service_worker": "background.js"},
+  "side_panel": {"default_path": "panel.html"}
+}
