@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"id": "remotive", "type": "remotive", "name": "Remotive", "enabled": true},
+    {"id": "greenhouse-stripe", "type": "greenhouse", "board": "stripe", "name": "Stripe careers", "company": "Stripe", "enabled": true},
+    {"id": "ashby-ashby", "type": "ashby", "board": "Ashby", "name": "Ashby careers", "company": "Ashby", "enabled": true}
+  ]
+}

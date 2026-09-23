@@ -1,1 +1,7 @@
 node_modules/
+
+var/
+data/jobs.json
+dist/
+__pycache__/
+*.pyc

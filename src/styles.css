@@ -1573,3 +1573,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 [data-theme="dark"] :is(.role-card,.mini-panel,.focus-panel) { background:var(--panel); }
 [data-theme="dark"] :is(.nav-item.active,.nav-item:hover) { background:#263d30; }
 [data-theme="dark"] .segmented button.active { background:#28674c; }
+.job-description { white-space:pre-line; max-height:360px; overflow:auto; line-height:1.65; }
+.saved-job { padding:16px 0; border-top:1px solid var(--line); display:grid; gap:10px; }
+.saved-job a { color:var(--blue); }
+#pipelineHealth article { padding:14px 0; border-bottom:1px solid var(--line); }
+#pipelineHealth p { color:var(--muted); }

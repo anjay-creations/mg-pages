@@ -1724,4 +1724,13 @@ setInterval(() => {
 
 setInterval(tickFocus, 1000);
 
+window.addEventListener('career:prepare-resume', event => {
+  const {role, company, description, resume} = event.detail;
+  state.resumeBuilder = {...state.resumeBuilder, targetRole:role, company, jobDescription:description,
+    sourceText:resume || state.resumeBuilder.sourceText, purpose:'Job-description-specific', step:1, confirmed:false};
+  localStorage.setItem('aigyaan-resume-builder', JSON.stringify(state.resumeBuilder));
+  state.activeView = 'resume';
+  render();
+});
+
 render();
