@@ -1578,3 +1578,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .saved-job a { color:var(--blue); }
 #pipelineHealth article { padding:14px 0; border-bottom:1px solid var(--line); }
 #pipelineHealth p { color:var(--muted); }
+#app.onboarding-layout { display:block; }
+.intake-shell { max-width:1120px; margin:0 auto; padding:24px; }
+.intake-header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:52px; }
+.pdf-intake { max-width:900px; margin:auto; }
+.pdf-intake > h1 { font-size:clamp(2rem,4vw,3.5rem); letter-spacing:-.04em; margin-bottom:12px; }
+.pdf-intake > p { color:var(--muted); line-height:1.7; }
+.intake-steps { display:flex; gap:12px; list-style:none; margin:28px 0; padding:0; }
+.intake-steps li { flex:1; padding:14px; color:var(--muted); border-bottom:2px solid var(--line); }
+.intake-steps li.active { color:var(--green); border-color:var(--green); font-weight:700; }
+.pdf-upload { padding:30px; text-align:center; border:2px dashed var(--line); border-radius:14px; background:var(--wash); }
+.pdf-upload input { padding:12px; margin:10px auto; max-width:440px; background:var(--panel); }
+.pdf-upload span { color:var(--muted); font-weight:400; }
+.intake-field { display:grid; align-content:start; gap:12px; }
+.extracted-details .resume-field-grid { padding-top:20px; }
+.extracted-details > label { margin-top:16px; }
+.extracted-text { white-space:pre-wrap; overflow-wrap:anywhere; max-height:360px; overflow:auto; padding:16px; background:var(--wash); }
+#intakeError { color:var(--coral); margin:0; }
+.resume-attached { padding:18px; border:1px solid var(--line); border-radius:10px; background:var(--wash); }
+@media(max-width:600px) { .intake-shell { padding:16px; } .intake-header { flex-wrap:wrap; margin-bottom:32px; } .intake-steps { font-size:.8rem; gap:5px; } .intake-steps li { padding:9px 4px; } .pdf-upload { padding:18px 10px; } }

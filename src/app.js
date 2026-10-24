@@ -1,9 +1,10 @@
 document.documentElement.dataset.theme = localStorage.getItem("career-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-import sqlite3InitModule from "./vendor/sqlite/index.mjs";
 
 import { careerView, bindCareer } from "./career.js";
+import {resumeReady, mountResumeIntake, resumeText, resumeData, resumeSkipped} from './resume-intake.mjs';
 
 const navItems = [
+  { id: "onboarding", label: "My PDF resume", icon: "doc" },
   { id: "jobs", label: "Find your next role", icon: "briefcase" },
   { id: "candidate", label: "Application passport", icon: "user" },
   { id: "prep", label: "Interview studio", icon: "doc" },
@@ -183,6 +184,16 @@ function icon(name) {
 }
 
 function render() {
+  const onboarding = !resumeReady() || state.activeView === 'onboarding';
+  document.querySelector('#app').classList.toggle('onboarding-layout', onboarding);
+  if (onboarding) {
+    mountResumeIntake(() => {
+      state.resumeBuilder = loadResumeBuilder();
+      state.activeView = 'jobs';
+      render();
+    }, () => { state.activeView='jobs'; render(); });
+    return;
+  }
   document.querySelector("#app").innerHTML = `
     <aside class="sidebar">
       <div class="brand">
@@ -377,8 +388,8 @@ function renderFindLocks() {
       <form class="tool-panel" id="findLocksForm">
         <label>Roles you are looking for (optional)<input id="roleInput" placeholder="Leave blank to get resume-based suggestions" /></label>
         <label>Preferred location<input id="locationInput" placeholder="India, Bengaluru, Remote, Mumbai" /></label>
-        <label>Upload resume<input id="resumeFile" type="file" accept=".txt,.pdf,.doc,.docx" /><small>Text files are read automatically. For PDF/DOC, add profile notes below in this static version.</small></label>
-        <label>Resume or profile notes<textarea id="resumeInput" placeholder="Paste resume text, skills, achievements, and experience."></textarea></label>
+        <button type="button" class="ghost-btn" data-view="onboarding">Review or replace your PDF resume</button>
+        <label>Resume or profile notes<textarea id="resumeInput" readonly>${escapeHtml(resumeText())}</textarea></label>
         <p class="form-status" id="resumeStatus" role="status"></p>
         <button class="primary-btn" type="submit">${icon("search")} Suggest Roles &amp; Find Jobs</button>
       </form>
@@ -583,7 +594,7 @@ function renderResumeBuilder() {
 function renderResumeIntake(builder) {
   return `
     <form class="resume-section resume-intake" id="resumeIntakeForm">
-      <div class="resume-section-head"><div><span class="source-pill">Step 1</span><h2>Goal and existing information</h2></div><p>Upload or paste what you already have. The next step asks only for important gaps.</p></div>
+      <div class="resume-section-head"><div><span class="source-pill">Step 1</span><h2>Goal and existing information</h2></div><p>Your PDF has been reviewed. Choose a target role and tailor the confirmed details.</p></div>
       <div class="resume-field-grid">
         <label>Target role<input id="rbTargetRole" value="${escapeHtml(builder.targetRole)}" placeholder="Enter the role presented by the user" /></label>
         <label>Profession / field<input id="rbProfession" value="${escapeHtml(builder.profession || "")}" placeholder="Teaching, design, healthcare, finance, trades..." /></label>
@@ -595,7 +606,7 @@ function renderResumeIntake(builder) {
         <label>Resume length<select id="rbLength"><option ${builder.length === "One page" ? "selected" : ""}>One page</option><option ${builder.length === "Two pages" ? "selected" : ""}>Two pages</option></select></label>
         <label>Language<input id="rbLanguage" value="${escapeHtml(builder.language || "English")}" placeholder="English" /></label>
         <label>Style<select id="rbStyle">${["Professional and restrained", "Modern", "Academic", "Creative but ATS-readable"].map(value => `<option ${builder.style === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-        <label>Existing resume or notes<input id="rbFile" type="file" accept=".txt,.pdf,.doc,.docx" /><small>Text files are extracted locally. Paste text for PDF/DOC in this static version.</small></label>
+        <div><p>Your reviewed PDF details are already loaded.</p><button type="button" class="ghost-btn" data-view="onboarding">Review or replace PDF</button></div>
       </div>
       <label>Resume, LinkedIn text, biography, experience, projects, or rough notes<textarea id="rbSource" placeholder="Paste all available professional information here...">${escapeHtml(builder.sourceText)}</textarea></label>
       <label>Target job description (optional)<textarea id="rbJobDescription" placeholder="Paste a job description for honest keyword matching...">${escapeHtml(builder.jobDescription)}</textarea></label>
@@ -817,7 +828,6 @@ function bindViewEvents() {
 
   bindApplyButtons();
 
-  document.querySelector("#resumeFile")?.addEventListener("change", handleResumeFile);
 
   document.querySelector("#findLocksForm")?.addEventListener("submit", event => {
     event.preventDefault();
@@ -837,7 +847,6 @@ function bindViewEvents() {
     button.addEventListener("click", () => deleteThought(button.dataset.id));
   });
 
-  document.querySelector("#rbFile")?.addEventListener("change", handleBuilderFile);
   document.querySelectorAll('input[name="rbTemplate"]').forEach(input => {
     input.addEventListener("change", () => {
       state.resumeBuilder.template = input.value;
@@ -996,18 +1005,6 @@ function suggestRoles(requestedRole, resume, location) {
   }));
 }
 
-async function handleResumeFile(event) {
-  const file = event.target.files[0];
-  const status = document.querySelector("#resumeStatus");
-  if (!file) return;
-  if (file.name.toLowerCase().endsWith(".txt")) {
-    document.querySelector("#resumeInput").value = await file.text();
-    status.textContent = `${file.name} loaded. Review the extracted text, then search.`;
-  } else {
-    status.textContent = `${file.name} attached. PDF/DOC text extraction needs a document-processing backend; paste the key text below for accurate suggestions.`;
-  }
-}
-
 function extractSkills(text) {
   const known = ["Python", "LLM", "React", "SQL", "AWS", "Analytics", "NLP", "FastAPI", "Product"];
   const found = known.filter(skill => text.toLowerCase().includes(skill.toLowerCase()));
@@ -1133,10 +1130,10 @@ async function runPracticeCode() {
 async function initializeSqlitePractice() {
   if (sqlitePracticeDb) return sqlitePracticeDb;
   if (sqlitePracticeInitialization) return sqlitePracticeInitialization;
-  sqlitePracticeInitialization = sqlite3InitModule({
+  sqlitePracticeInitialization = import('./vendor/sqlite/index.mjs').then(({default:sqlite3InitModule}) => sqlite3InitModule({
     print: () => {},
     printErr: error => console.error("SQLite:", error)
-  }).then(sqlite3 => {
+  })).then(sqlite3 => {
     const db = new sqlite3.oo1.DB(":memory:", "c");
     db.exec(`
       PRAGMA foreign_keys = ON;
@@ -1249,19 +1246,6 @@ function persistResumeBuilder() {
   localStorage.setItem("aigyaan-resume-builder", JSON.stringify(state.resumeBuilder));
 }
 
-async function handleBuilderFile(event) {
-  const file = event.target.files[0];
-  const status = document.querySelector("#rbFileStatus");
-  if (!file) return;
-  if (file.name.toLowerCase().endsWith(".txt")) {
-    const text = await file.text();
-    document.querySelector("#rbSource").value = text;
-    status.textContent = `${file.name} extracted locally. Review the text before continuing.`;
-  } else {
-    status.textContent = `${file.name} selected. PDF/DOC extraction requires a document backend; paste its text above to continue accurately.`;
-  }
-}
-
 function extractResumeInformation(event) {
   event.preventDefault();
   const builder = state.resumeBuilder;
@@ -1278,7 +1262,8 @@ function extractResumeInformation(event) {
   builder.sourceText = document.querySelector("#rbSource").value.trim();
   builder.jobDescription = document.querySelector("#rbJobDescription").value.trim();
   builder.template = document.querySelector('input[name="rbTemplate"]:checked')?.value || "classic";
-  builder.data = extractResumeData(builder.sourceText, builder.targetRole, builder.jobDescription);
+  builder.data = builder.sourceText === resumeText() ? resumeData() : extractResumeData(builder.sourceText, builder.targetRole, builder.jobDescription);
+  builder.data.sourceSummary ||= builder.data.summary || '';
   builder.data.skills = polishExtractedSkills(builder.data.skills, builder.jobDescription);
   builder.data.summary = recreateProfessionalSummary(builder, builder.data.sourceSummary);
   builder.missing = findMissingResumeInformation(builder);
@@ -1417,14 +1402,15 @@ function setResumeReviewMode(mode) {
 
 function findMissingResumeInformation(builder) {
   const data = builder.data || {};
+  const skipped = resumeSkipped();
   const missing = [];
   if (!builder.targetRole) missing.push("Add the target role before tailoring the resume.");
   if (!data.fullName) missing.push("Provide and verify your full name.");
-  if (!data.email || !data.phone) missing.push("Complete professional email and phone number with country code.");
-  if (!data.location) missing.push("Add city and country; a full residential address is unnecessary.");
-  if (!data.experience && builder.level !== "Student / fresher") missing.push("Add professional history with role, organisation, dates, personal contribution, approach, and factual impact.");
+  if (!data.email || (!data.phone && !skipped.phone)) missing.push("Complete professional email and phone number with country code.");
+  if (!data.location && !skipped.location) missing.push("Add city and country; a full residential address is unnecessary.");
+  if (!data.experience && !skipped.experience && builder.level !== "Student / fresher") missing.push("Add professional history with role, organisation, dates, personal contribution, approach, and factual impact.");
   if (data.experience && !/(?:19|20)\d{2}|present|current/i.test(data.experience)) missing.push("Add month/year dates and organisation names to each professional entry.");
-  if (!data.education) missing.push("Add degree, institution, location, and complete dates.");
+  if (!data.education && !skipped.education) missing.push("Add degree, institution, location, and complete dates.");
   if (data.education && !/(?:19|20)\d{2}|expected/i.test(data.education)) missing.push("Add the institution name and start/end or expected completion dates for each qualification.");
   if (data.certifications && !/(?:19|20)\d{2}|issued|expires?|valid/i.test(data.certifications)) missing.push("Verify each certification's issuer, issue date, status, and expiry date when applicable.");
   if (!data.skills) missing.push("Add only skills supported by experience, projects, education, or certifications.");

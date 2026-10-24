@@ -33,7 +33,7 @@ Custom domain → maigyaan.in
 - AI Search chat surface with a recruitment-specialist prompt, top 3 references, and a boundary response for non-career questions.
 - Tagging answers into Tagged Gyaan.
 - Optional chat saving with a visible 24-hour expiry timer.
-- Find Locks accepts pasted resume text or a `.txt` upload, recommends three matching roles, and links directly to each suggested role on LinkedIn, Naukri, and Foundit. PDF/DOC extraction still needs a document-processing backend.
+- Resume onboarding starts with PDF upload, extracts text locally, asks for missing details, and requires review before opening job search. Find Locks reuses the reviewed resume.
 - Daily application keys: each applier gets 20 keys per day, shown in the top navigation.
 - Apply interaction: every job search card has a lock symbol; applying inserts the key, rotates the lock 90 degrees, decrements the daily key count, then opens the job search.
 - Profile button in the top navigation opens a right-side profile/settings drawer with configuration-ready Google and LinkedIn login entry points.
@@ -63,7 +63,7 @@ Custom job feeds can use this schema:
 {"jobs":[{"title":"Data Analyst","company":"Example","location":"India","description":"SQL and Python","postedAt":"2026-09-20T08:00:00Z","url":"https://example.com/careers/analyst","source":"Company careers"}]}
 ```
 
-Only HTTPS job links are accepted. Supplied publication dates must be valid and non-future. Missing publication dates stay unknown and appear only when “Include roles with an unknown posting date” is selected. Such jobs show their first-discovered date explicitly. Invalid entries are omitted; results are sorted newest first. No fake vacancies are seeded. Network failures display an actionable error. CV input supports plain text; PDF/DOCX parsing remains unavailable. Cover letters contain an explicit achievement placeholder for the candidate to complete.
+Only HTTPS job links are accepted. Supplied publication dates must be valid and non-future. Missing publication dates stay unknown and appear only when “Include roles with an unknown posting date” is selected. Such jobs show their first-discovered date explicitly. Invalid entries are omitted; results are sorted newest first. No fake vacancies are seeded. Network failures display an actionable error. Resume input is PDF-only; extraction is local and reviewed before reuse. DOCX and scanned-image OCR are not supported. Cover letters contain an explicit achievement placeholder for the candidate to complete.
 
 Application Passport stores editable answers in browser localStorage. Personal details are not seeded in public source. Export JSON and import it into the extension, which stores answers in chrome.storage.local. Both provide deletion controls. These stores are device-local, not encrypted vaults or account sync; exports contain the entered personal details.
 
@@ -106,3 +106,21 @@ npm run build         # Stage public files in dist/ after collection
 Optional real-browser smoke check: start the site on port 5175, then run `node scripts/browser_smoke.mjs`. Set `SITE_URL` or `CHROME_PATH` if needed. It uses a temporary Chrome profile and checks filter results, saved application history across reloads, cover-letter and CV handoff, theme switching and mobile overflow. It does not submit applications.
 
 The generated database and snapshots must not be committed. The production workflow stages only an allowlist into `dist/`, so candidate exports, development notes and SQLite backups are not included in the deployed website.
+
+
+## PDF-first onboarding
+
+New users see only the PDF resume step before the career workspace. Upload a text-based `.pdf` (maximum 10 MB and 30 pages), review extracted name/contact details, skills, work experience, education and other recognised sections, then complete missing fields. Optional details may be explicitly omitted; work experience can be marked not applicable for a student. Confirmation is required before continuing. Extraction is heuristic, so all fields remain editable and the original extracted text is available for comparison.
+
+The reviewed profile—not the uncorrected extraction—is reused for job matching, cover letters and CV building. Email and phone also populate Application Passport, while full names are not automatically split into given/family names. “My PDF resume” lets users review or replace their PDF. Replacing it requires a fresh review; removing it clears the saved resume and derived matching/builder state. Completed reviews survive reloads on the same browser. Legacy text profiles do not bypass PDF onboarding.
+
+Mozilla PDF.js 4.10.38 is vendored under `src/vendor/pdfjs/`, including its worker, CMaps, standard fonts and Apache-2.0 licence. This copy was reused from an existing local installation; no npm dependency or CDN was added. The PDF file is processed in the browser and is not uploaded or saved. Extracted text and reviewed details are stored in localStorage. Non-PDF, empty, oversized, corrupt and password-protected files receive actionable errors. Image-only or nearly empty pages require OCR outside the app and are not silently skipped. There is no OCR service in this version.
+
+`node --test tests/resume-intake.test.mjs` checks extraction heuristics, required/optional gaps, text reconstruction and PDF validation. The Chrome smoke test also exercises real PDF extraction, invalid-file handling, incomplete-review gating, persistence, corrected-detail reuse, and replacement/removal.
+
+
+## Loading and dependencies
+
+No new package installation is needed for PDF intake. The existing local PDF.js distribution is vendored with its licence; `package.json` and the lockfile have no PDF dependency. This is reuse of an existing PDF library, not a claim that browsers can parse PDFs without one.
+
+The entrypoint loads only the intake UI and its small parsing helpers (about 20 KB of uncompressed JavaScript). The main career workspace loads after the first completed resume review. PDF.js and its worker load only when a valid PDF is selected; supporting font/CMap files are fetched only when needed. SQL's JavaScript and WebAssembly load only when SQL practice opens. Native dynamic imports provide this split without a bundler or additional framework. The browser smoke test checks these network boundaries, a 30 KB initial-JavaScript budget, and the deferred SQL query path.
